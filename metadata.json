@@ -1,0 +1,6 @@
+{
+  "name": "Royal Fish Store",
+  "description": "Premium fresh seafood and meat delivery app, inspired by Licious, featuring home delivery, dynamic offers, dark mode, and easy payment options.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7e0a0a" />
+      <stop offset="50%" stop-color="#a80e0e" />
+      <stop offset="100%" stop-color="#c21818" />
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+  </defs>
+  <!-- Rounded square background with premium border -->
+  <rect width="512" height="512" rx="128" fill="url(#bg)" />
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="none" stroke="url(#gold)" stroke-width="8" opacity="0.25" />
+  
+  <!-- Outer glowing rings / delivery circular waves -->
+  <circle cx="256" cy="256" r="210" fill="none" stroke="url(#gold)" stroke-width="12" stroke-dasharray="30 20" opacity="0.35" />
+  <circle cx="256" cy="256" r="180" fill="none" stroke="#ffffff" stroke-width="6" stroke-dasharray="10 15" opacity="0.2" />
+  
+  <!-- Sleek Fish swimming with high speed -->
+  <!-- Body -->
+  <path d="M120 256 C 180 175, 320 175, 380 256 C 320 337, 180 337, 120 256 Z" fill="url(#gold)" />
+  <!-- Tail fin -->
+  <path d="M120 256 L 55 200 L 75 256 L 55 312 Z" fill="url(#gold)" />
+  <!-- Dorsal fin -->
+  <path d="M220 195 C 260 130, 300 150, 310 195 Z" fill="url(#gold)" opacity="0.95" />
+  <!-- Ventral fin -->
+  <path d="M220 317 C 260 382, 300 362, 310 317 Z" fill="url(#gold)" opacity="0.85" />
+  <!-- Eye -->
+  <circle cx="340" cy="245" r="10" fill="#7e0a0a" />
+  <circle cx="342" cy="243" r="3" fill="#ffffff" />
+  
+  <!-- Crown on top representing Royalty -->
+  <path d="M225 115 L 240 145 L 256 125 L 272 145 L 287 115 L 278 165 L 234 165 Z" fill="url(#gold)" stroke="#ffffff" stroke-width="4" stroke-linejoin="round" />
+  <circle cx="225" cy="110" r="4" fill="#ffffff" />
+  <circle cx="256" cy="120" r="4" fill="#ffffff" />
+  <circle cx="287" cy="110" r="4" fill="#ffffff" />
+
+  <!-- Speed motion delivery lines -->
+  <path d="M410 256 H 460" stroke="url(#gold)" stroke-width="14" stroke-linecap="round" />
+  <path d="M395 220 H 435" stroke="url(#gold)" stroke-width="10" stroke-linecap="round" opacity="0.8" />
+  <path d="M395 292 H 435" stroke="url(#gold)" stroke-width="10" stroke-linecap="round" opacity="0.8" />
+</svg>
