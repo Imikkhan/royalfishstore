@@ -1,53 +1,65 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Order } from '../types';
-import { User as UserIcon, MapPin, ShoppingBag, Phone, Mail, ShieldAlert, CheckCircle, Package, Truck, Compass, ChevronDown, ChevronUp, LogOut, KeyRound } from 'lucide-react';
+import { User as UserIcon, MapPin, ShoppingBag, Phone, Mail, ShieldAlert, CheckCircle, Package, Truck, Compass, ChevronDown, ChevronUp, LogOut, KeyRound, MessageSquare, Send, X } from 'lucide-react';
+import { API_BASE_URL } from '../config';
 
 export const Profile: React.FC = () => {
   const { orders, addresses, lastPlacedOrder, navigateTo, user, logout } = useApp();
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+  const [activeChatOrder, setActiveChatOrder] = useState<Order | null>(null);
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [chatInput, setChatInput] = useState('');
+
+  const fetchChatMessages = async (orderId: string) => {
+    try {
+      const authToken = localStorage.getItem('royal-fish-token');
+      const headers: Record<string, string> = {};
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
+      const res = await fetch(`${API_BASE_URL}/orders/${orderId}/chat`, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setChatMessages(data);
+      }
+    } catch (e) {}
+  };
+
+  useEffect(() => {
+    if (!activeChatOrder) return;
+    fetchChatMessages(activeChatOrder.id);
+    const interval = setInterval(() => {
+      fetchChatMessages(activeChatOrder.id);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [activeChatOrder]);
+
+  const handleSendChat = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim() || !activeChatOrder) return;
+
+    const messageText = chatInput.trim();
+    setChatInput('');
+
+    try {
+      const authToken = localStorage.getItem('royal-fish-token');
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
+      await fetch(`${API_BASE_URL}/orders/${activeChatOrder.id}/chat`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ message: messageText })
+      });
+      fetchChatMessages(activeChatOrder.id);
+    } catch (e) {}
+  };
 
   const toggleOrderExpand = (orderId: string) => {
     setExpandedOrderId(prev => (prev === orderId ? null : orderId));
   };
 
-  // Pre-seed a beautiful mock completed order if orders list is empty,
-  // so the user has immediate rich tracking items to see.
-  const displayOrders: Order[] = orders.length > 0 ? orders : [
-    {
-      id: 'ROYAL-598210',
-      date: '17 Jul 2026, 02:40 PM',
-      items: [
-        {
-          productId: 'fs-1',
-          productName: 'Surmai / Seer King Fish Steaks',
-          productImage: 'https://images.unsplash.com/photo-1534604973900-c43ab4c2e0ab?auto=format&fit=crop&w=400&q=80',
-          price: 649,
-          quantity: 1
-        },
-        {
-          productId: 'ch-1',
-          productName: 'Tender Chicken Curry Cut (Small)',
-          productImage: 'https://images.unsplash.com/photo-1604503468506-a8da13d82791?auto=format&fit=crop&w=400&q=80',
-          price: 169,
-          quantity: 2
-        }
-      ],
-      totalPrice: 987,
-      paymentMethod: 'UPI',
-      address: addresses[0] || {
-        id: 'addr-1',
-        name: 'Home (Default)',
-        type: 'Home',
-        addressLine: 'Flat 402, Royal Residency, Marine Drive',
-        city: 'Mumbai',
-        zipCode: '400002',
-        phone: '+91 98765 43210'
-      },
-      status: 'Delivered',
-      estimatedDelivery: 'Completed in 35 mins'
-    }
-  ];
+  const displayOrders: Order[] = orders;
 
   if (!user) {
     return (
@@ -136,171 +148,210 @@ export const Profile: React.FC = () => {
 
           {/* Orders timeline listing */}
           <div className="space-y-4">
-            {displayOrders.map(order => {
-              const isExpanded = expandedOrderId === order.id || order.id === lastPlacedOrder?.id;
-              
-              // Get status progress code
-              const statusSteps = ['Placed', 'Processing', 'Out for Delivery', 'Delivered'] as const;
-              const currentStepIdx = statusSteps.indexOf(order.status as any);
-
-              return (
-                <div 
-                  key={order.id}
-                  className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4 transition-all"
-                  id={`order-container-${order.id}`}
+            {displayOrders.length === 0 ? (
+              <div className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-2xl p-8 text-center space-y-4 shadow-xs">
+                <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 flex items-center justify-center mx-auto text-2xl">
+                  📦
+                </div>
+                <div className="space-y-1">
+                  <h4 className="font-extrabold text-base text-gray-900 dark:text-white">No Orders Placed Yet</h4>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
+                    You haven't placed any orders with us yet. Explore our fresh catch of seafood & meats!
+                  </p>
+                </div>
+                <button
+                  onClick={() => navigateTo('catalog')}
+                  className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all active:scale-95 inline-flex items-center gap-2"
                 >
-                  
-                  {/* Order header bar */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-50 dark:border-slate-800/40 pb-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-extrabold text-sm text-gray-900 dark:text-white">
-                          Order ID: {order.id}
-                        </span>
-                        
-                        {/* Status Label Pill */}
-                        <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md ${
-                          order.status === 'Delivered'
-                            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'
-                            : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 animate-pulse'
-                        }`}>
-                          {order.status}
-                        </span>
+                  <ShoppingBag className="w-4 h-4" />
+                  <span>Explore Fresh Catch</span>
+                </button>
+              </div>
+            ) : (
+              displayOrders.map(order => {
+                const isExpanded = expandedOrderId === order.id || order.id === lastPlacedOrder?.id;
+                
+                const statusSteps = ['Placed', 'Processing', 'Out for Delivery', 'Delivered'] as const;
+                
+                const getStepIndex = (st: string) => {
+                  switch (st) {
+                    case 'Placed':
+                    case 'Pending':
+                    case 'Pending Assignment':
+                      return 0;
+                    case 'Processing':
+                    case 'Dispatched':
+                      return 1;
+                    case 'Out for Delivery':
+                      return 2;
+                    case 'Delivered':
+                      return 3;
+                    default:
+                      return 0;
+                  }
+                };
+
+                const currentStepIdx = getStepIndex(order.status);
+
+                return (
+                  <div 
+                    key={order.id}
+                    className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-2xl p-5 shadow-xs space-y-4 transition-all"
+                    id={`order-container-${order.id}`}
+                  >
+                    
+                    {/* Order header bar */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-50 dark:border-slate-800/40 pb-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-sm text-gray-900 dark:text-white">
+                            Order ID: {order.id}
+                          </span>
+                          
+                          {/* Status Label Pill */}
+                          <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md ${
+                            order.status === 'Delivered'
+                              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'
+                              : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 animate-pulse'
+                          }`}>
+                            {order.status}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-gray-400 font-mono mt-0.5 block">{order.date}</span>
                       </div>
-                      <span className="text-[10px] text-gray-400 font-mono mt-0.5 block">{order.date}</span>
+
+                      <div className="flex items-center gap-3 justify-between sm:justify-end">
+                        {order.status !== 'Delivered' && (
+                          <button
+                            onClick={() => setActiveChatOrder(order)}
+                            className="px-3 py-1.5 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shrink-0"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                            <span>Chat Rider</span>
+                          </button>
+                        )}
+
+                        <div className="text-right">
+                          <span className="text-[10px] text-gray-400 block">Total Cost</span>
+                          <span className="font-extrabold text-sm text-red-600 dark:text-red-400 block">₹{order.totalPrice}</span>
+                        </div>
+
+                        {/* Expand Chevron */}
+                        <button
+                          onClick={() => toggleOrderExpand(order.id)}
+                          className="p-2 rounded-xl bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 text-gray-600 dark:text-gray-300 transition-colors"
+                          aria-label="Toggle details"
+                        >
+                          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </button>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-4 justify-between sm:justify-end">
-                      <div className="text-right">
-                        <span className="text-[10px] text-gray-400 block">Total Cost</span>
-                        <span className="font-extrabold text-sm text-red-600 dark:text-red-400 block">₹{order.totalPrice}</span>
-                      </div>
-
-                      {/* Expand Chevron */}
-                      <button
-                        onClick={() => toggleOrderExpand(order.id)}
-                        className="p-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg text-gray-500"
-                        id={`btn-expand-order-${order.id}`}
-                      >
-                        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Order Tracking Progress Visualizer (Only visible when active or expanded) */}
-                  {order.status !== 'Delivered' && (
-                    <div className="bg-gray-50/50 dark:bg-slate-800/10 rounded-xl border border-gray-100 dark:border-slate-800/60 p-4 space-y-4">
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-gray-500">Estimated Arrival:</span>
-                        <strong className="text-emerald-600 dark:text-emerald-400 font-extrabold">{order.estimatedDelivery}</strong>
-                      </div>
-
-                      {/* Visual Progress Steps */}
-                      <div className="grid grid-cols-4 gap-1 text-center relative select-none pt-2">
-                        {statusSteps.map((step, idx) => {
+                    {/* Progress step bar */}
+                    <div className="py-2">
+                      <div className="flex items-center justify-between text-[11px] font-bold mb-2">
+                        {statusSteps.map((stepName, idx) => {
                           const isDone = idx <= currentStepIdx;
                           const isCurrent = idx === currentStepIdx;
-                          return (
-                            <div key={step} className="flex flex-col items-center gap-1.5 relative">
-                              {/* Connector line */}
-                              {idx < 3 && (
-                                <div className={`absolute top-2.5 left-1/2 w-full h-[3px] -z-10 ${
-                                  idx < currentStepIdx 
-                                    ? 'bg-red-500' 
-                                    : 'bg-gray-200 dark:bg-slate-700'
-                                }`} />
-                              )}
-                              
-                              {/* Ring/Circle */}
-                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                                isDone 
-                                  ? 'bg-red-500 border-red-500 text-white' 
-                                  : 'bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700'
-                              }`}>
-                                {isDone && <CheckCircle className="w-3.5 h-3.5" />}
-                              </div>
 
-                              {/* Label text */}
-                              <span className={`text-[9px] sm:text-[10px] font-bold ${
+                          return (
+                            <div 
+                              key={stepName} 
+                              className={`flex flex-col items-center gap-1 ${
+                                isDone 
+                                  ? 'text-red-600 dark:text-red-400 font-extrabold' 
+                                  : 'text-gray-400 dark:text-slate-600 font-medium'
+                              }`}
+                            >
+                              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${
                                 isCurrent 
-                                  ? 'text-red-600 dark:text-red-400 font-extrabold scale-105' 
+                                  ? 'bg-red-600 text-white ring-4 ring-red-100 dark:ring-red-950/50' 
                                   : isDone 
-                                  ? 'text-gray-800 dark:text-gray-200' 
-                                  : 'text-gray-400 dark:text-gray-500'
+                                    ? 'bg-red-100 dark:bg-red-950/40 text-red-600' 
+                                    : 'bg-gray-100 dark:bg-slate-800 text-gray-400'
                               }`}>
-                                {step}
-                              </span>
+                                {isDone ? '✓' : idx + 1}
+                              </div>
+                              <span className="text-[10px] text-center">{stepName}</span>
                             </div>
                           );
                         })}
                       </div>
-                    </div>
-                  )}
 
-                  {/* Expanded Item Breakdown Details */}
-                  {isExpanded && (
-                    <div className="space-y-3.5 pt-1.5 border-t border-gray-50 dark:border-slate-800/20 animate-fadeIn">
-                      <div className="space-y-2">
-                        <span className="text-[10px] text-gray-400 font-bold uppercase block tracking-wider">
-                          Portion Details
-                        </span>
+                      {/* Bar Line */}
+                      <div className="w-full bg-gray-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                        <div 
+                          className="bg-gradient-to-r from-red-500 to-rose-600 h-full transition-all duration-500"
+                          style={{ width: `${((currentStepIdx + 1) / statusSteps.length) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Expanded Items & Address Detail */}
+                    {isExpanded && (
+                      <div className="pt-3 border-t border-gray-50 dark:border-slate-800/40 space-y-4 animate-fadeIn">
                         
+                        {/* Purchased Portion Items */}
                         <div className="space-y-2">
-                          {order.items.map(item => (
-                            <div key={item.productId} className="flex items-center justify-between text-xs text-gray-700 dark:text-gray-300 bg-gray-50/40 dark:bg-slate-800/20 p-2 rounded-xl border border-gray-100/40">
-                              <div className="flex items-center gap-2">
-                                <img
-                                  src={item.productImage}
-                                  alt={item.productName}
-                                  referrerPolicy="no-referrer"
-                                  className="w-10 h-10 rounded-lg object-cover"
-                                />
-                                <div>
-                                  <span className="font-bold block">{item.productName}</span>
-                                  <span className="text-[10px] text-gray-400">₹{item.price} x {item.quantity}</span>
+                          <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">
+                            Portion Details
+                          </span>
+                          <div className="space-y-2">
+                            {(order.items || []).map((item, i) => (
+                              <div key={i} className="flex items-center justify-between text-xs bg-gray-50/70 dark:bg-slate-800/40 p-2.5 rounded-xl">
+                                <div className="flex items-center gap-2.5">
+                                  <img 
+                                    src={item.productImage || 'https://images.unsplash.com/photo-1534604973900-c43ab4c2e0ab?auto=format&fit=crop&w=400&q=80'} 
+                                    alt={item.productName} 
+                                    className="w-10 h-10 rounded-lg object-cover"
+                                  />
+                                  <div>
+                                    <span className="font-bold block">{item.productName}</span>
+                                    <span className="text-[10px] text-gray-400">₹{item.price} x {item.quantity}</span>
+                                  </div>
                                 </div>
+                                <span className="font-bold text-gray-900 dark:text-white">
+                                  ₹{item.price * item.quantity}
+                                </span>
                               </div>
-                              <span className="font-bold text-gray-900 dark:text-white">
-                                ₹{item.price * item.quantity}
-                              </span>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-2 border-t border-gray-50 dark:border-slate-800/40">
+                          {/* Address */}
+                          <div className="space-y-0.5">
+                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">
+                              Delivered To:
+                            </span>
+                            <span className="font-bold text-gray-800 dark:text-gray-200 block">
+                              {order.address?.name || 'Customer'} ({order.address?.type || 'Home'})
+                            </span>
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-snug">
+                              {order.address?.addressLine || 'Address N/A'}, {order.address?.city || ''} - {order.address?.zipCode || ''}
+                            </p>
+                          </div>
+
+                          {/* Payment */}
+                          <div className="space-y-0.5">
+                            <span className="text-[10px] text-gray-400 font-bold uppercase block tracking-wider">
+                              Payment info:
+                            </span>
+                            <span className="font-bold text-gray-800 dark:text-gray-200 block">
+                              Method: {order.paymentMethod}
+                            </span>
+                            <span className="text-[10px] text-gray-500 dark:text-gray-400 block">
+                              Total amount paid: <strong>₹{order.totalPrice}</strong>
+                            </span>
+                          </div>
                         </div>
                       </div>
+                    )}
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-2 border-t border-gray-50 dark:border-slate-800/40">
-                        {/* Address */}
-                        <div className="space-y-0.5">
-                          <span className="text-[10px] text-gray-400 font-bold uppercase block tracking-wider">
-                            Delivered To:
-                          </span>
-                          <span className="font-bold text-gray-800 dark:text-gray-200 block">
-                            {order.address.name} ({order.address.type})
-                          </span>
-                          <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-snug">
-                            {order.address.addressLine}, {order.address.city} - {order.address.zipCode}
-                          </p>
-                        </div>
-
-                        {/* Payment */}
-                        <div className="space-y-0.5">
-                          <span className="text-[10px] text-gray-400 font-bold uppercase block tracking-wider">
-                            Payment info:
-                          </span>
-                          <span className="font-bold text-gray-800 dark:text-gray-200 block">
-                            Method: {order.paymentMethod}
-                          </span>
-                          <span className="text-[10px] text-gray-500 dark:text-gray-400 block">
-                            Total amount paid: <strong>₹{order.totalPrice}</strong>
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                </div>
-              );
-            })}
+                  </div>
+                );
+              })
+            )}
           </div>
 
         </div>
@@ -375,6 +426,110 @@ export const Profile: React.FC = () => {
         </div>
 
       </div>
+
+      {/* Customer Live Order Chat Modal */}
+      {activeChatOrder && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-3">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl shadow-2xl flex flex-col h-[520px] overflow-hidden border border-gray-100 dark:border-slate-800 animate-fadeIn">
+            {/* Header */}
+            <div className="p-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-red-600 text-white flex items-center justify-center font-bold text-xs">
+                  💬
+                </div>
+                <div>
+                  <h3 className="text-xs font-extrabold uppercase tracking-tight">Delivery Rider Live Chat</h3>
+                  <p className="text-[10px] text-gray-400 font-mono">Order #{activeChatOrder.id}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setActiveChatOrder(null)}
+                className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-gray-300 flex items-center justify-center text-xs"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Quick Chips */}
+            <div className="p-2 bg-gray-50 dark:bg-slate-800/40 border-b border-gray-100 dark:border-slate-800 flex gap-1.5 overflow-x-auto text-[10px] shrink-0">
+              <button
+                type="button"
+                onClick={() => setChatInput("Where is my delivery? 🚴")}
+                className="px-2.5 py-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-full font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap hover:bg-gray-100"
+              >
+                Where is my order? 🚴
+              </button>
+              <button
+                type="button"
+                onClick={() => setChatInput("Please leave at door 🚪")}
+                className="px-2.5 py-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-full font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap hover:bg-gray-100"
+              >
+                Leave at door 🚪
+              </button>
+              <button
+                type="button"
+                onClick={() => setChatInput("Call me when outside 📞")}
+                className="px-2.5 py-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-full font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap hover:bg-gray-100"
+              >
+                Call when outside 📞
+              </button>
+            </div>
+
+            {/* Chat Messages List */}
+            <div className="flex-1 p-3 overflow-y-auto space-y-2 bg-gray-50/60 dark:bg-slate-950/40">
+              {chatMessages.length === 0 ? (
+                <div className="text-center text-xs text-gray-400 py-8">
+                  No messages yet. Send a quick message to your delivery rider!
+                </div>
+              ) : (
+                chatMessages.map((m: any, idx: number) => {
+                  const isCustomer = m.sender_type === 'customer';
+                  const bubbleBg = isCustomer
+                    ? 'bg-red-600 text-white rounded-br-none ml-auto'
+                    : 'bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-200 rounded-bl-none border border-gray-100 dark:border-slate-700';
+                  const align = isCustomer ? 'justify-end' : 'justify-start';
+
+                  return (
+                    <div key={idx} className={`flex ${align}`}>
+                      <div className={`max-w-[80%] p-2.5 rounded-2xl ${bubbleBg} shadow-xs space-y-0.5`}>
+                        <div className="text-[9px] font-bold opacity-80 flex items-center justify-between gap-3">
+                          <span>{m.sender_name || (isCustomer ? 'You' : 'Delivery Rider')}</span>
+                          <span>{new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                        <p className="text-xs font-medium leading-normal">{m.message}</p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Input Bar or Locked Banner */}
+            {activeChatOrder.status === 'Delivered' ? (
+              <div className="p-3.5 bg-gray-100 dark:bg-slate-800/80 text-center text-xs font-extrabold text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-slate-800 flex items-center justify-center gap-1.5">
+                <span>🔒</span> Order Delivered & Closed — Live chat session ended.
+              </div>
+            ) : (
+              <form onSubmit={handleSendChat} className="p-3 bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-slate-800 flex gap-2 items-center shrink-0">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  placeholder="Type a message to delivery rider..."
+                  className="flex-1 px-3 py-2 bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-xs focus:outline-none focus:border-red-500 font-medium text-gray-900 dark:text-white"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-extrabold rounded-xl transition-colors shrink-0 flex items-center gap-1.5 shadow-xs active:scale-95"
+                >
+                  <span>Send</span>
+                  <Send className="w-3.5 h-3.5" />
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   );

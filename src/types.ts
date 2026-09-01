@@ -1,7 +1,7 @@
 export interface Product {
   id: string;
   name: string;
-  category: 'fish-seafood' | 'chicken' | 'mutton' | 'marinades' | 'cold-cuts' | 'combos';
+  category: string;
   subCategory?: string;
   image: string;
   price: number;
@@ -13,7 +13,10 @@ export interface Product {
   netWeight?: string;
   piecesAfterCutting?: string;
   deliveryTime?: string;
+  delivery_time?: string;
   description: string;
+  shortDescription?: string;
+  short_description?: string;
   tags: string[];
   servicedPincodes?: string[];
   isDeliverable?: boolean;
@@ -21,6 +24,20 @@ export interface Product {
   isTodaySpecial?: boolean;
   rating: number;
   reviewsCount: number;
+  stockQuantity?: number;
+  stock_quantity?: number;
+  inStock?: boolean;
+  in_stock?: boolean;
+  lowStockThreshold?: number;
+  low_stock_threshold?: number;
+  minOrderQty?: number;
+  min_order_qty?: number;
+  maxOrderQty?: number;
+  max_order_qty?: number;
+  isOutOfStock?: boolean;
+  is_out_of_stock?: boolean;
+  isLowStock?: boolean;
+  is_low_stock?: boolean;
 }
 
 export interface Slide {
@@ -31,6 +48,17 @@ export interface Slide {
   bgGradient?: string;
   image: string;
   textColor?: string;
+}
+
+export interface Video {
+  id: string;
+  title: string;
+  youtubeUrl?: string;
+  youtube_url?: string;
+  youtubeId?: string;
+  youtube_id?: string;
+  thumbnail?: string;
+  duration?: string;
 }
 
 export interface CartItem {
@@ -72,4 +100,4 @@ export interface User {
   isLoggedIn: boolean;
 }
 
-export type PageId = 'home' | 'product-details' | 'cart' | 'profile' | 'login' | 'category-view' | 'categories';
+export type PageId = 'home' | 'product-details' | 'cart' | 'profile' | 'login' | 'category-view' | 'categories' | 'search' | 'onepager';

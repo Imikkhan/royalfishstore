@@ -35,36 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           {/* Header */}
           <div className="flex items-center justify-between pb-6 border-b border-gray-100 dark:border-slate-800">
             <div className="flex items-center gap-2.5">
-              <div className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-tr from-[#7e0a0a] via-[#a80e0e] to-[#c21818] shadow-md border border-amber-400/20 shrink-0 overflow-hidden">
-                <svg className="w-5.5 h-5.5 text-amber-400 drop-shadow-md" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  {/* Delivery Circular Ring showing speed/motion */}
-                  <path d="M12 2a10 10 0 0 1 8 16" stroke="currentColor" strokeDasharray="3 3" />
-                  <path d="M20 18a10 10 0 0 1-16-6" stroke="currentColor" />
-                  {/* Express delivery arrow */}
-                  <path d="M2 12l2-2 2 2" stroke="currentColor" />
-                  {/* Beautiful Fish Swimming through the center */}
-                  <path d="M8 12c1-2 3.5-3.5 6.5-3.5 2.5 0 4.5 1.5 5.5 3-1 1.5-3 3-5.5 3-3 0-5.5-1.5-6.5-3z" fill="currentColor" stroke="none" />
-                  <path d="M8 12l-3-2v4z" fill="currentColor" stroke="none" />
-                  {/* Fish eye */}
-                  <circle cx="16" cy="11.5" r="0.75" fill="#7e0a0a" />
-                </svg>
-              </div>
-              <div className="flex flex-col">
-                <div className="flex items-baseline">
-                  <span className="font-sans font-black tracking-tight text-base text-[#a80e0e] dark:text-[#f87171] leading-none uppercase">
-                    Royal
-                  </span>
-                  <span className="font-sans font-black tracking-tight text-base text-slate-900 dark:text-white leading-none uppercase ml-0.5">
-                    Fish
-                  </span>
-                  <span className="font-sans font-black tracking-tight text-base text-slate-900 dark:text-white leading-none uppercase ml-0.5">
-                    Store
-                  </span>
-                </div>
-                <span className="text-[8px] font-mono tracking-[0.18em] text-[#a80e0e]/75 dark:text-amber-400 font-extrabold uppercase leading-none mt-1">
-                  {user ? `Hi, ${user.name.split(' ')[0]} 🚚` : 'Online Fish Delivery'}
-                </span>
-              </div>
+              <img src="/logo.png" alt="Royal Fish Store Logo" className="h-10 w-auto object-contain" />
             </div>
             <button
               onClick={onClose}
@@ -106,6 +77,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             >
               <Home className="w-4 h-4 text-gray-400" />
               <span>Home Screen</span>
+            </button>
+
+            <button
+              onClick={() => {
+                navigateTo('onepager');
+                onClose();
+              }}
+              className="w-full flex items-center justify-between px-3 py-2 text-sm font-bold text-[#fc490f] bg-orange-50/70 dark:bg-orange-950/30 hover:bg-orange-100 rounded-xl transition-colors border border-orange-200/50"
+              id="sidebar-link-onepager"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-base">🔥</span>
+                <span>FB Special Deals (Onepager)</span>
+              </div>
+              <span className="bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full">
+                20% OFF
+              </span>
             </button>
 
             <button

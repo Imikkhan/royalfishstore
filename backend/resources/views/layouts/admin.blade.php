@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-50 dark:bg-slate-900">
+<html lang="en" dir="ltr" class="h-full bg-slate-50 dark:bg-slate-900">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -46,6 +46,20 @@
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             }
         });
+
+        $(document).ajaxError(function(event, xhr, settings) {
+            if (xhr.status === 419) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Session Expired',
+                    text: 'Your security token has expired. Refreshing page...',
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(function() {
+                    window.location.reload();
+                });
+            }
+        });
     </script>
 
     <!-- DataTables JS/CSS with Responsive, Buttons (Excel, PDF, CSV, Print), FixedHeader -->
@@ -62,6 +76,10 @@
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
 
+    <!-- Select2 Searchable Dropdown CSS & JS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
@@ -75,6 +93,11 @@
 
     <!-- Custom DataTables and UI styling override -->
     <style>
+        html, body {
+            direction: ltr !important;
+            text-align: left !important;
+        }
+
         /* Select2 Premium Theme Overrides */
         .select2-container--default .select2-selection--single {
             background-color: rgb(248 250 252) !important;
@@ -271,11 +294,20 @@
             <a href="{{ url('/admin/products') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ Str::startsWith($route, 'admin/products') ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
                 <i class="fa-solid fa-shrimp w-5"></i> <span class="sidebar-text">Products CRUD</span>
             </a>
+            <a href="{{ url('/admin/inventory') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ Str::startsWith($route, 'admin/inventory') ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
+                <i class="fa-solid fa-boxes-stacked w-5 text-amber-400"></i> <span class="sidebar-text">Stock & Inventory</span>
+            </a>
             @endif
 
             @if($hasPerm('orders'))
             <a href="{{ url('/admin/orders') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ Str::startsWith($route, 'admin/orders') ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
                 <i class="fa-solid fa-truck-ramp-box w-5"></i> <span class="sidebar-text">Orders Tracking</span>
+            </a>
+            @endif
+
+            @if($hasPerm('logistics') || $hasPerm('*'))
+            <a href="{{ url('/admin/logistics') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ Str::startsWith($route, 'admin/logistics') ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
+                <i class="fa-solid fa-truck-fast w-5"></i> <span class="sidebar-text">Logistics & Shipping</span>
             </a>
             @endif
 
@@ -288,6 +320,18 @@
             @if($hasPerm('slides') || $hasPerm('*'))
             <a href="{{ url('/admin/slides') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ Str::startsWith($route, 'admin/slides') ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
                 <i class="fa-solid fa-images w-5"></i> <span class="sidebar-text">Hero Banners</span>
+            </a>
+            @endif
+
+            @if($hasPerm('media') || $hasPerm('*'))
+            <a href="{{ url('/admin/videos') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ Str::startsWith($route, 'admin/videos') ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
+                <i class="fa-solid fa-circle-play w-5 text-red-500"></i> <span class="sidebar-text">YouTube Videos</span>
+            </a>
+            @endif
+
+            @if($hasPerm('settings') || $hasPerm('*'))
+            <a href="{{ url('/admin/facebook-ad') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ Str::startsWith($route, 'admin/facebook-ad') ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
+                <i class="fa-brands fa-facebook w-5 text-blue-400"></i> <span class="sidebar-text">Facebook Ad Page</span>
             </a>
             @endif
 
@@ -336,6 +380,99 @@
                     <i class="fa-solid fa-sun hidden dark:block text-amber-400 text-lg"></i>
                 </button>
 
+                <!-- Admin Notification Bell Popover -->
+                @php
+                    $adminNotifs = collect();
+
+                    try {
+                        // 1. Pending Dispatches
+                        $pendingOrders = \App\Models\Order::where('shipment_status', 'Pending Assignment')->orWhere('status', 'Placed')->latest()->take(3)->get();
+                        foreach($pendingOrders as $po) {
+                            $adminNotifs->push([
+                                'icon' => 'fa-truck-fast',
+                                'bg' => 'bg-amber-100 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400',
+                                'title' => 'Dispatch Pending: ' . $po->id,
+                                'desc' => 'Amount: ₹' . $po->total_price . ' (' . $po->payment_method . ')',
+                                'time' => $po->created_at ? $po->created_at->diffForHumans() : 'Recently',
+                                'link' => url('/admin/logistics'),
+                                'is_unread' => true
+                            ]);
+                        }
+
+                        // 2. Active Shipments
+                        $activeShipments = \App\Models\Order::whereIn('shipment_status', ['Dispatched', 'Out for Delivery'])->latest()->take(3)->get();
+                        foreach($activeShipments as $as) {
+                            $adminNotifs->push([
+                                'icon' => 'fa-boxes-packing',
+                                'bg' => 'bg-blue-100 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400',
+                                'title' => 'Shipment ' . $as->shipment_status . ': ' . $as->id,
+                                'desc' => 'Rider assigned to order.',
+                                'time' => $as->updated_at ? $as->updated_at->diffForHumans() : 'Active',
+                                'link' => url('/admin/logistics'),
+                                'is_unread' => false
+                            ]);
+                        }
+
+                        // 3. Delivered Today
+                        $deliveredToday = \App\Models\Order::where('shipment_status', 'Delivered')->whereDate('updated_at', now()->today())->latest()->take(2)->get();
+                        foreach($deliveredToday as $dt) {
+                            $adminNotifs->push([
+                                'icon' => 'fa-circle-check',
+                                'bg' => 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400',
+                                'title' => 'Order Delivered: ' . $dt->id,
+                                'desc' => 'Fulfilled & cash collected.',
+                                'time' => $dt->delivered_at ? $dt->delivered_at->diffForHumans() : 'Today',
+                                'link' => url('/admin/orders'),
+                                'is_unread' => false
+                            ]);
+                        }
+                    } catch(\Throwable $e) {}
+
+                    $adminUnreadCount = $adminNotifs->where('is_unread', true)->count();
+                @endphp
+
+                <div class="relative">
+                    <button id="admin-notif-btn" class="relative p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors flex items-center justify-center">
+                        <i class="fa-solid fa-bell text-lg"></i>
+                        @if($adminUnreadCount > 0)
+                        <span id="admin-notif-badge" class="absolute -top-1 -right-1 w-4 h-4 bg-red-600 text-white text-[10px] font-black rounded-full flex items-center justify-center animate-pulse">{{ $adminUnreadCount }}</span>
+                        @endif
+                    </button>
+
+                    <!-- Notifications Dropdown -->
+                    <div id="admin-notif-dropdown" class="hidden fixed top-14 right-3 left-3 sm:left-auto sm:right-0 sm:absolute sm:top-full w-auto sm:w-96 max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl z-50 overflow-hidden animate-fadeIn">
+                        <div class="p-3 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                            <h3 class="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                                <i class="fa-solid fa-bell text-red-600 dark:text-red-400"></i> Admin Alerts ({{ count($adminNotifs) }})
+                            </h3>
+                            <button id="btn-clear-admin-notif" class="text-[10px] font-bold text-red-600 dark:text-red-400 hover:underline">Mark all read</button>
+                        </div>
+                        <div class="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800" id="admin-notif-container">
+                            @forelse($adminNotifs as $an)
+                            <a href="{{ $an['link'] }}" class="p-3 block {{ $an['is_unread'] ? 'bg-red-50/50 dark:bg-red-950/20' : '' }} hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-8 h-8 rounded-full {{ $an['bg'] }} flex items-center justify-center shrink-0 text-xs font-bold mt-0.5">
+                                        <i class="fa-solid {{ $an['icon'] }}"></i>
+                                    </div>
+                                    <div class="space-y-0.5 flex-1 min-w-0">
+                                        <p class="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{{ $an['title'] }}</p>
+                                        <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">{{ $an['desc'] }}</p>
+                                        <span class="text-[9px] text-slate-400 font-mono block mt-0.5">{{ $an['time'] }}</span>
+                                    </div>
+                                </div>
+                            </a>
+                            @empty
+                            <div class="p-6 text-center text-slate-400 text-xs">No admin notifications right now.</div>
+                            @endforelse
+                        </div>
+                        <div class="p-2.5 bg-slate-50 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-800 text-center">
+                            <a href="{{ url('/admin/logistics') }}" class="text-xs font-extrabold text-red-600 dark:text-red-400 hover:underline flex items-center justify-center gap-1">
+                                <span>Go to Logistics Console</span> <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="h-8 w-px bg-slate-200 dark:bg-slate-800"></div>
 
                 <!-- Profile Indicator -->
@@ -349,7 +486,7 @@
         </header>
 
         <!-- Main Content View -->
-        <main class="flex-1 overflow-y-auto p-6 bg-slate-50 dark:bg-slate-950">
+        <main class="flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-4 sm:p-6 bg-slate-50 dark:bg-slate-950">
             @yield('content')
         </main>
     </div>
@@ -406,6 +543,12 @@
             </a>
             @endif
 
+            @if($hasPerm('logistics') || $hasPerm('*'))
+            <a href="{{ url('/admin/logistics') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ Str::startsWith($route, 'admin/logistics') ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
+                <i class="fa-solid fa-truck-fast w-5"></i> Logistics & Shipping
+            </a>
+            @endif
+
             @if($hasPerm('media'))
             <a href="{{ url('/admin/media') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ $route == 'admin/media' ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
                 <i class="fa-solid fa-photo-film w-5"></i> Media Manager
@@ -415,6 +558,12 @@
             @if($hasPerm('slides') || $hasPerm('*'))
             <a href="{{ url('/admin/slides') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ Str::startsWith($route, 'admin/slides') ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
                 <i class="fa-solid fa-images w-5"></i> Hero Banners
+            </a>
+            @endif
+
+            @if($hasPerm('settings') || $hasPerm('*'))
+            <a href="{{ url('/admin/facebook-ad') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ Str::startsWith($route, 'admin/facebook-ad') ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
+                <i class="fa-brands fa-facebook w-5 text-blue-400"></i> Facebook Ad Page
             </a>
             @endif
 
@@ -469,6 +618,33 @@
                 } else {
                     document.documentElement.classList.add('dark');
                     localStorage.setItem('dark-mode', 'true');
+                }
+            });
+
+            // Admin Notification Popover Toggle
+            $(document).on('click', '#admin-notif-btn', function(e) {
+                e.stopPropagation();
+                $('#admin-notif-dropdown').toggleClass('hidden');
+            });
+
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('#admin-notif-dropdown, #admin-notif-btn').length) {
+                    $('#admin-notif-dropdown').addClass('hidden');
+                }
+            });
+
+            $(document).on('click', '#btn-clear-admin-notif', function(e) {
+                e.preventDefault();
+                $('#admin-notif-badge').remove();
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Notifications Cleared',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 1200
+                    });
                 }
             });
         });

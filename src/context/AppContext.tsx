@@ -1,14 +1,88 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Product, CartItem, Address, Order, PageId, User, Slide } from '../types';
-import { PRODUCTS as MOCK_PRODUCTS, CATEGORIES as MOCK_CATEGORIES, PROMO_SLIDES } from '../data/products';
+import { Product, CartItem, Address, Order, PageId, User, Slide, Video } from '../types';
+import { PRODUCTS, CATEGORIES, PROMO_SLIDES } from '../data/products';
+import { API_BASE_URL } from '../config';
 
-const API_BASE_URL = 'http://127.0.0.1:8000/api';
+import { Toast, ToastMessage } from '../components/Toast';
+
+// Helper: resolve relative image URLs to absolute using the API domain
+const API_DOMAIN = API_BASE_URL.replace(/\/api\/?$/, '');
+const resolveImageUrl = (img: string | null | undefined): string => {
+  if (!img) return 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=500&q=80';
+  if (img.startsWith('http://') || img.startsWith('https://')) return img;
+  // Relative path like /uploads/xxx.webp
+  return `${API_DOMAIN}${img.startsWith('/') ? '' : '/'}${img}`;
+};
+
+// Helper: safely parse a JSON string field into an array, or return as-is if already array
+const safeParseArray = (val: any): any[] => {
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string') {
+    try { const parsed = JSON.parse(val); return Array.isArray(parsed) ? parsed : []; } catch { return []; }
+  }
+  return [];
+};
+
+// Normalize a product from the API response to match the frontend Product type
+const normalizeProduct = (p: any): Product => {
+  const price = Number(p.price || 0);
+  const originalPrice = Number(p.originalPrice || p.original_price || 0);
+
+  const stockQuantity = p.stockQuantity !== undefined ? Number(p.stockQuantity) : (p.stock_quantity !== undefined ? Number(p.stock_quantity) : 50);
+  const inStock = p.inStock !== undefined ? Boolean(p.inStock) : (p.in_stock !== undefined ? Boolean(p.in_stock) : (stockQuantity > 0));
+  const lowStockThreshold = Number(p.lowStockThreshold || p.low_stock_threshold || 5);
+  const minOrderQty = Math.max(1, Number(p.minOrderQty || p.min_order_qty || 1));
+  const maxOrderQty = Math.max(1, Number(p.maxOrderQty || p.max_order_qty || 10));
+  const isOutOfStock = !inStock || stockQuantity <= 0;
+  const isLowStock = inStock && stockQuantity > 0 && stockQuantity <= lowStockThreshold;
+
+  return {
+    ...p,
+    id: String(p.id || p.product_code || p.slug || Math.random()),
+    name: p.name || 'Fresh Seafood',
+    category: typeof p.category === 'object' && p.category !== null ? p.category.slug || p.category.name : (p.category || 'fish-seafood'),
+    subCategory: p.subCategory || p.sub_category || 'Fresh Fish',
+    sub_category: p.subCategory || p.sub_category || 'Fresh Fish',
+    price: price,
+    originalPrice: originalPrice,
+    original_price: originalPrice,
+    weight: p.weight || '500g',
+    pieces: p.pieces || 'Cleaned & Cut Pieces',
+    servings: p.servings || 'Serves 2-3',
+    description: p.description || 'Sourced fresh daily and vacuum packed under 4°C.',
+    shortDescription: p.shortDescription || p.short_description || '',
+    short_description: p.shortDescription || p.short_description || '',
+    deliveryTime: p.deliveryTime || p.delivery_time || 'Today 4:00pm - 08:30 pm',
+    delivery_time: p.deliveryTime || p.delivery_time || 'Today 4:00pm - 08:30 pm',
+    image: resolveImageUrl(p.image),
+    tags: safeParseArray(p.tags),
+    servicedPincodes: safeParseArray(p.servicedPincodes || p.serviced_pincodes),
+    rating: Number(p.rating || 4.9),
+    reviewsCount: Number(p.reviewsCount || p.reviews_count || 128),
+    isBestSeller: Boolean(p.isBestSeller || p.is_best_seller),
+    isTodaySpecial: Boolean(p.isTodaySpecial || p.is_today_special),
+    stockQuantity: stockQuantity,
+    stock_quantity: stockQuantity,
+    inStock: inStock,
+    in_stock: inStock,
+    lowStockThreshold: lowStockThreshold,
+    low_stock_threshold: lowStockThreshold,
+    minOrderQty: minOrderQty,
+    min_order_qty: minOrderQty,
+    maxOrderQty: maxOrderQty,
+    max_order_qty: maxOrderQty,
+    isOutOfStock: isOutOfStock,
+    is_out_of_stock: isOutOfStock,
+    isLowStock: isLowStock,
+    is_low_stock: isLowStock,
+  };
+};
 
 interface AppContextType {
   theme: 'light' | 'dark';
   toggleTheme: () => void;
   currentPage: PageId;
-  navigateTo: (page: PageId, productId?: string) => void;
+  navigateTo: (page: PageId, productId?: string, productData?: Product) => void;
   navigationHistory: PageId[];
   goBack: () => void;
   selectedProductId: string | null;
@@ -18,6 +92,11 @@ interface AppContextType {
   products: Product[];
   categories: any[];
   slides: Slide[];
+  videos: Video[];
+
+  // Global Store Settings
+  minOrderAmount: number;
+  freeDeliveryThreshold: number;
 
   // Pincode Location State
   activePincode: string;
@@ -29,53 +108,59 @@ interface AppContextType {
   isLoadingProducts: boolean;
   isLoadingCategories: boolean;
   isLoadingSlides: boolean;
+  isLoadingVideos: boolean;
 
-  // Cart
+  // Cart State
   cart: CartItem[];
   addToCart: (product: Product) => void;
   removeFromCart: (productId: string) => void;
   clearCart: () => void;
   getCartQuantity: (productId: string) => number;
-  cartCount: number;
-  cartSubtotal: number;
+  totalCartItems: number;
+  subtotalAmount: number;
   deliveryFee: number;
-  cartTotal: number;
-  discountAmount: number;
+  totalAmount: number;
   couponCode: string;
   applyCoupon: (code: string) => boolean;
+  discountAmount: number;
 
-  // Addresses
+  // User State & Auth
+  user: User | null;
+  setUser: (user: User | null) => void;
+  login: (name: string, phone: string, email: string, token?: string) => Promise<void>;
+  logout: () => void;
+
+  // Address State
   addresses: Address[];
-  addAddress: (address: Omit<Address, 'id'>) => void;
   selectedAddressId: string | null;
-  setSelectedAddressId: (id: string | null) => void;
-
-  // Payments
+  setSelectedAddressId: (id: string) => void;
+  addAddress: (address: Omit<Address, 'id'>) => void;
+  
+  // Payment State
   selectedPaymentMethod: string;
   setSelectedPaymentMethod: (method: string) => void;
 
-  // Orders
-  orders: Order[];
-  placeOrder: () => void;
-  lastPlacedOrder: Order | null;
-
-  // User auth state
-  user: User | null;
-  login: (name: string, phone: string, email: string) => void;
-  logout: () => void;
-
-  // Search/Filters
+  // Search & Categories State
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   selectedCategory: string | null;
   setSelectedCategory: (category: string | null) => void;
   selectedSubCategory: string | null;
-  setSelectedSubCategory: (subCategory: string | null) => void;
+  setSelectedSubCategory: (subCat: string | null) => void;
   activeHeroIndex: number;
-  setActiveHeroIndex: (index: number) => void;
-}
+  setActiveHeroIndex: React.Dispatch<React.SetStateAction<number>>;
 
-const AppContext = createContext<AppContextType | undefined>(undefined);
+  // Order State
+  orders: Order[];
+  lastPlacedOrder: Order | null;
+  placeOrder: () => void;
+  isPlacingOrder: boolean;
+  showOrderSuccessModal: boolean;
+  // Toast Notification System
+  toast: ToastMessage | null;
+  showToast: (message: string, type?: 'success' | 'error' | 'info' | 'warning') => void;
+  hideToast: () => void;
+}
 
 const DEFAULT_ADDRESSES: Address[] = [
   {
@@ -98,6 +183,8 @@ const DEFAULT_ADDRESSES: Address[] = [
   }
 ];
 
+const AppContext = createContext<AppContextType | undefined>(undefined);
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Theme state
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -106,8 +193,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   // Routing state
-  const [currentPage, setCurrentPage] = useState<PageId>('home');
+  const [currentPage, setCurrentPage] = useState<PageId>(() => {
+    if (typeof window !== 'undefined') {
+      const search = window.location.search;
+      const hash = window.location.hash;
+      const path = window.location.pathname;
+      const params = new URLSearchParams(search);
+      const pageParam = params.get('page');
+      
+      if (
+        pageParam === 'onepager' || 
+        hash === '#onepager' || 
+        path === '/onepager' || 
+        params.get('ad') === 'fb' || 
+        params.has('fbclid')
+      ) {
+        return 'onepager';
+      }
+      
+      if (pageParam && ['home', 'product-details', 'cart', 'profile', 'login', 'category-view', 'categories', 'search', 'onepager'].includes(pageParam)) {
+        return pageParam as PageId;
+      }
+    }
+    return 'home';
+  });
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [selectedProductData, setSelectedProductData] = useState<Product | null>(null);
   const [navigationHistory, setNavigationHistory] = useState<PageId[]>(['home']);
 
   // Pincode & Location State
@@ -116,15 +227,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
   const [isPincodeModalOpen, setIsPincodeModalOpen] = useState(false);
 
-  // Dynamic Lists State (with mock fallbacks)
-  const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS);
-  const [categories, setCategories] = useState<any[]>(Array.from(MOCK_CATEGORIES));
-  const [slides, setSlides] = useState<Slide[]>(PROMO_SLIDES);
+  // Dynamic Lists State — start empty so only API data is shown (skeleton shows while loading)
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [slides, setSlides] = useState<Slide[]>([]);
+  const [videos, setVideos] = useState<Video[]>([]);
 
-  // Skeleton Loading States
+  // Skeleton Loading States — starts as true while fetching live backend API data
   const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(true);
   const [isLoadingCategories, setIsLoadingCategories] = useState<boolean>(true);
   const [isLoadingSlides, setIsLoadingSlides] = useState<boolean>(true);
+  // Toast System
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const showToast = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
+    setToast({ id: Date.now(), message, type });
+  };
+  const hideToast = () => setToast(null);
+
+  const [isLoadingVideos, setIsLoadingVideos] = useState<boolean>(true);
 
   const setPincode = (pin: string) => {
     setActivePincode(pin);
@@ -156,6 +276,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : [];
   });
   const [lastPlacedOrder, setLastPlacedOrder] = useState<Order | null>(null);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [showOrderSuccessModal, setShowOrderSuccessModal] = useState(false);
 
   // Search & Categories State
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -169,21 +291,54 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved ? JSON.parse(saved) : null;
   });
 
-  // Fetch categories, slides and products on boot & updates
+  // Global Settings State
+  const [minOrderAmount, setMinOrderAmount] = useState<number>(199);
+  const [freeDeliveryThreshold, setFreeDeliveryThreshold] = useState<number>(499);
+
+  // Fetch categories, slides, videos and settings on boot & updates
   useEffect(() => {
-    setIsLoadingCategories(true);
-    fetch(`${API_BASE_URL}/categories`)
-      .then(res => {
-        if (!res.ok) throw new Error();
-        return res.json();
-      })
-      .then(data => {
-        if (Array.isArray(data) && data.length > 0) {
-          setCategories(data);
-        }
-      })
-      .catch(() => console.log('Backend categories offline, using mockup.'))
-      .finally(() => setIsLoadingCategories(false));
+    const fetchSettings = () => {
+      fetch(`${API_BASE_URL}/settings`)
+        .then(res => {
+          if (!res.ok) throw new Error();
+          return res.json();
+        })
+        .then(data => {
+          if (data && typeof data === 'object') {
+            if (data.min_order_amount !== undefined) {
+              setMinOrderAmount(Number(data.min_order_amount) || 199);
+            }
+            if (data.free_delivery_threshold !== undefined) {
+              setFreeDeliveryThreshold(Number(data.free_delivery_threshold) || 499);
+            }
+          }
+        })
+        .catch(() => {});
+    };
+
+    fetchSettings();
+
+    const fetchCategories = () => {
+      fetch(`${API_BASE_URL}/categories`)
+        .then(res => {
+          if (!res.ok) throw new Error();
+          return res.json();
+        })
+        .then(data => {
+          if (Array.isArray(data)) {
+            setCategories(data.map((cat: any) => ({
+              ...cat,
+              image: resolveImageUrl(cat.image)
+            })));
+          }
+          setIsLoadingCategories(false);
+        })
+        .catch(() => {
+          setIsLoadingCategories(false);
+        });
+    };
+
+    fetchCategories();
 
     const fetchSlides = () => {
       fetch(`${API_BASE_URL}/slides`)
@@ -192,29 +347,59 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           return res.json();
         })
         .then(data => {
-          if (Array.isArray(data) && data.length > 0) {
+          if (Array.isArray(data)) {
             setSlides(data);
           }
+          setIsLoadingSlides(false);
         })
-        .catch(() => console.log('Backend slides offline, using mockup.'))
-        .finally(() => setIsLoadingSlides(false));
+        .catch(() => {
+          setIsLoadingSlides(false);
+        });
     };
 
     fetchSlides();
 
-    // Re-fetch slides on window focus and every 10s so Admin updates sync instantly
-    const onFocus = () => fetchSlides();
+    const fetchVideos = () => {
+      fetch(`${API_BASE_URL}/videos`)
+        .then(res => {
+          if (!res.ok) throw new Error();
+          return res.json();
+        })
+        .then(data => {
+          if (Array.isArray(data)) {
+            setVideos(data);
+          }
+          setIsLoadingVideos(false);
+        })
+        .catch(() => {
+          setIsLoadingVideos(false);
+        });
+    };
+
+    fetchVideos();
+
+    // Re-fetch slides, categories, settings and videos on window focus and every 5s so Admin updates sync instantly
+    const onFocus = () => {
+      fetchSettings();
+      fetchCategories();
+      fetchSlides();
+      fetchVideos();
+    };
     window.addEventListener('focus', onFocus);
-    const slidesInterval = setInterval(fetchSlides, 10000);
+    const syncInterval = setInterval(() => {
+      fetchSettings();
+      fetchCategories();
+      fetchSlides();
+      fetchVideos();
+    }, 5000);
 
     return () => {
       window.removeEventListener('focus', onFocus);
-      clearInterval(slidesInterval);
+      clearInterval(syncInterval);
     };
   }, []);
 
-  useEffect(() => {
-    setIsLoadingProducts(true);
+  const fetchProductsList = () => {
     const params = new URLSearchParams();
     if (selectedCategory) params.append('category', selectedCategory);
     if (selectedSubCategory) params.append('sub_category', selectedSubCategory);
@@ -228,18 +413,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
       .then(data => {
         if (Array.isArray(data)) {
-          setProducts(data);
+          setProducts(data.map(normalizeProduct));
         }
+        setIsLoadingProducts(false);
       })
-      .catch(() => console.log('Backend products offline, using mockup.'))
-      .finally(() => setIsLoadingProducts(false));
+      .catch(() => {
+        setIsLoadingProducts(false);
+      });
+  };
+
+  useEffect(() => {
+    setIsLoadingProducts(true);
+    fetchProductsList();
+
+    const onFocus = () => fetchProductsList();
+    window.addEventListener('focus', onFocus);
+    const interval = setInterval(fetchProductsList, 5000);
+
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      clearInterval(interval);
+    };
   }, [selectedCategory, selectedSubCategory, searchQuery, activePincode]);
 
-  // Load User Data (Addresses, orders) from API
+  // Load User Data (Profile, Addresses, orders) from API
   const loadUserData = async (token: string) => {
     try {
       const headers = { 'Authorization': `Bearer ${token}` };
       
+      const profRes = await fetch(`${API_BASE_URL}/profile`, { headers });
+      if (profRes.ok) {
+        const profData = await profRes.json();
+        if (profData && (profData.phone || profData.name)) {
+          const syncedUser: User = {
+            name: profData.name,
+            phone: profData.phone,
+            email: profData.email,
+            isLoggedIn: true
+          };
+          setUser(syncedUser);
+          localStorage.setItem('royal-fish-user', JSON.stringify(syncedUser));
+        }
+      }
+
       const addrRes = await fetch(`${API_BASE_URL}/addresses`, { headers });
       if (addrRes.ok) {
         const addrData = await addrRes.json();
@@ -269,32 +485,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  const login = async (name: string, phone: string, email: string) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, phone, email })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.token) {
-          localStorage.setItem('royal-fish-token', data.token);
-          setUser(data.user);
-          localStorage.setItem('royal-fish-user', JSON.stringify(data.user));
-          loadUserData(data.token);
-        }
-      } else {
-        // Fallback mockup login if server is offline
-        const loggedInUser = { name, phone, email, isLoggedIn: true };
-        setUser(loggedInUser);
-        localStorage.setItem('royal-fish-user', JSON.stringify(loggedInUser));
-      }
-    } catch(err) {
-      // Offline fallback
-      const loggedInUser = { name, phone, email, isLoggedIn: true };
-      setUser(loggedInUser);
-      localStorage.setItem('royal-fish-user', JSON.stringify(loggedInUser));
+  const login = async (name: string, phone: string, email: string, token?: string) => {
+    const loggedInUser: User = { name, phone, email, isLoggedIn: true };
+    setUser(loggedInUser);
+    localStorage.setItem('royal-fish-user', JSON.stringify(loggedInUser));
+
+    if (token) {
+      localStorage.setItem('royal-fish-token', token);
+      loadUserData(token);
     }
   };
 
@@ -341,9 +539,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
   };
 
-  const navigateTo = (page: PageId, productId?: string) => {
+  const navigateTo = (page: PageId, productId?: string, productData?: Product) => {
     if (productId) {
       setSelectedProductId(productId);
+    }
+    if (productData) {
+      setSelectedProductData(productData);
     }
     if (page === 'home') {
       setSelectedCategory(null);
@@ -366,23 +567,59 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const selectedProduct = selectedProductId 
-    ? products.find(p => p.id === selectedProductId) || null 
-    : null;
+  // Use directly stored product data first, then fall back to products array lookup
+  const selectedProduct = selectedProductData 
+    ? selectedProductData
+    : selectedProductId 
+      ? products.find(p => 
+          String(p.id) === String(selectedProductId) || 
+          String((p as any).product_code) === String(selectedProductId) ||
+          String((p as any).slug) === String(selectedProductId)
+        ) || null 
+      : null;
 
   // Cart operations
   const addToCart = (product: Product) => {
+    if (product.isOutOfStock || (product.stockQuantity !== undefined && product.stockQuantity <= 0)) {
+      showToast(`${product.name} is currently out of stock.`, 'warning');
+      return;
+    }
+
+    const minQty = Math.max(1, Number(product.minOrderQty || (product as any).min_order_qty || 1));
+    const maxQty = Math.max(1, Number(product.maxOrderQty || (product as any).max_order_qty || 10));
+    const availableStock = product.stockQuantity !== undefined ? Number(product.stockQuantity) : 999;
+
     setCart(prev => {
       const existingIndex = prev.findIndex(item => item.product.id === product.id);
       if (existingIndex > -1) {
-          const updated = [...prev];
-          updated[existingIndex] = {
-            ...updated[existingIndex],
-            quantity: updated[existingIndex].quantity + 1
-          };
-          return updated;
+        const currentQty = prev[existingIndex].quantity;
+        const newQty = currentQty + 1;
+
+        if (newQty > maxQty) {
+          showToast(`Maximum purchase limit for ${product.name} is ${maxQty} units per order.`, 'warning');
+          return prev;
+        }
+
+        if (newQty > availableStock) {
+          showToast(`Only ${availableStock} units left in stock for ${product.name}.`, 'warning');
+          return prev;
+        }
+
+        const updated = [...prev];
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          quantity: newQty
+        };
+        return updated;
       }
-      return [...prev, { product, quantity: 1 }];
+
+      // Initial add respecting minOrderQty
+      const initialQty = Math.min(minQty, availableStock);
+      if (initialQty > maxQty) {
+        showToast(`Cannot add item: min order limit exceeds max limit.`, 'warning');
+        return prev;
+      }
+      return [...prev, { product, quantity: initialQty }];
     });
   };
 
@@ -390,9 +627,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCart(prev => {
       const existingIndex = prev.findIndex(item => item.product.id === productId);
       if (existingIndex > -1) {
-        const updated = [...prev];
-        const item = updated[existingIndex];
-        if (item.quantity > 1) {
+        const item = prev[existingIndex];
+        const minQty = Math.max(1, Number(item.product.minOrderQty || (item.product as any).min_order_qty || 1));
+
+        if (item.quantity > minQty) {
+          const updated = [...prev];
           updated[existingIndex] = {
             ...item,
             quantity: item.quantity - 1
@@ -419,7 +658,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const cartCount = cart.reduce((total, item) => total + item.quantity, 0);
   const cartSubtotal = cart.reduce((total, item) => total + (item.product.price * item.quantity), 0);
-  const deliveryFee = cartSubtotal === 0 ? 0 : (cartSubtotal >= 499 ? 0 : 49);
+  const deliveryFee = cartSubtotal === 0 ? 0 : (cartSubtotal >= freeDeliveryThreshold ? 0 : 49);
 
   const applyCoupon = (code: string): boolean => {
     const cleanCode = code.toUpperCase().trim();
@@ -471,37 +710,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Place Order
   const placeOrder = async () => {
-    if (cart.length === 0) return;
+    if (cart.length === 0 || isPlacingOrder) return;
     
-    const token = localStorage.getItem('royal-fish-token');
-    const selectedAddress = addresses.find(a => a.id === selectedAddressId) || addresses[0];
-
-    if (!token) {
-      // Offline mock fallback
-      const newOrder: Order = {
-        id: `ROYAL-${Math.floor(100000 + Math.random() * 900000)}`,
-        date: new Date().toLocaleDateString('en-IN', {
-          day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-        }),
-        items: cart.map(item => ({
-          productId: item.product.id,
-          productName: item.product.name,
-          productImage: item.product.image,
-          price: item.product.price,
-          quantity: item.quantity
-        })),
-        totalPrice: cartTotal,
-        paymentMethod: selectedPaymentMethod.toUpperCase(),
-        address: selectedAddress,
-        status: 'Placed',
-        estimatedDelivery: '30-45 mins'
-      };
-      setOrders(prev => [newOrder, ...prev]);
-      setLastPlacedOrder(newOrder);
-      clearCart();
-      navigateTo('profile');
+    // Check Minimum Order Amount
+    if (cartSubtotal < minOrderAmount && minOrderAmount > 0) {
+      showToast(`Minimum order value is ₹${minOrderAmount}. Please add ₹${minOrderAmount - cartSubtotal} more to checkout.`, 'warning');
       return;
     }
+
+    const token = localStorage.getItem('royal-fish-token');
+    if (!token || !user) {
+      showToast("Please login first to place an order.", "warning");
+      navigateTo('login');
+      return;
+    }
+
+    setIsPlacingOrder(true);
+    const selectedAddress = addresses.find(a => a.id === selectedAddressId) || addresses[0];
 
     try {
       const res = await fetch(`${API_BASE_URL}/orders`, {
@@ -517,15 +742,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           totalPrice: cartTotal
         })
       });
+
       if (res.ok) {
         const newOrder = await res.json();
         setOrders(prev => [newOrder, ...prev]);
         setLastPlacedOrder(newOrder);
         clearCart();
-        navigateTo('profile');
+        setShowOrderSuccessModal(true);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        if (res.status === 401) {
+          showToast("Your session has expired. Please login again.", "warning");
+          setUser(null);
+          localStorage.removeItem('royal-fish-token');
+          localStorage.removeItem('royal-fish-user');
+          navigateTo('login');
+        } else {
+          showToast(errData.message || "Failed to place order. Please try again.", "error");
+        }
       }
     } catch(err) {
-      console.error(err);
+      console.error('Order placement error:', err);
+      showToast("Network connection error. Please try again.", "error");
+    } finally {
+      setIsPlacingOrder(false);
     }
   };
 
@@ -543,6 +783,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         products,
         categories,
         slides,
+        videos,
+        minOrderAmount,
+        freeDeliveryThreshold,
         activePincode,
         setPincode,
         isPincodeModalOpen,
@@ -550,6 +793,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isLoadingProducts,
         isLoadingCategories,
         isLoadingSlides,
+        isLoadingVideos,
         cart,
         addToCart,
         removeFromCart,
@@ -570,8 +814,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSelectedPaymentMethod,
         orders,
         placeOrder,
+        isPlacingOrder,
+        showOrderSuccessModal,
+        setShowOrderSuccessModal,
         lastPlacedOrder,
         user,
+        setUser,
         login,
         logout,
         searchQuery,
@@ -581,9 +829,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         selectedSubCategory,
         setSelectedSubCategory,
         activeHeroIndex,
-        setActiveHeroIndex
+        setActiveHeroIndex,
+        toast,
+        showToast,
+        hideToast
       }}
     >
+      <Toast toast={toast} onClose={hideToast} />
       {children}
     </AppContext.Provider>
   );

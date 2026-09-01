@@ -123,151 +123,182 @@ class DatabaseSeeder extends Seeder
 
         // 4. Seed Categories & Subcategories
         $categories = [
+            // 1. Wholesale Fish
             [
-                'name' => 'Fish & Seafood',
-                'slug' => 'fish-seafood',
+                'name' => 'Wholesale Fish',
+                'slug' => 'wholesale-fish',
+                'icon' => '📦',
+                'image' => 'https://images.unsplash.com/photo-1534604973900-c43ab4c2e0ab?auto=format&fit=crop&w=500&q=80',
+                'description' => 'Bulk & Wholesale Fresh Fish',
+                'parent_slug' => null
+            ],
+
+            // 2. Fresh Fish & its Subcategories
+            [
+                'name' => 'Fresh Fish',
+                'slug' => 'fresh-fish',
                 'icon' => '🐟',
                 'image' => 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=500&q=80',
-                'description' => 'Fresh Catch',
+                'description' => 'Daily Fresh Catch',
                 'parent_slug' => null
             ],
             [
-                'name' => 'Fresh Chicken',
+                'name' => 'Rohu & Catla',
+                'slug' => 'rohu-catla',
+                'icon' => '🏞️',
+                'image' => 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=200&q=80',
+                'description' => 'Freshwater Rohu & Catla cuts',
+                'parent_slug' => 'fresh-fish'
+            ],
+            [
+                'name' => 'Live Fish',
+                'slug' => 'live-fish',
+                'icon' => '🌊',
+                'image' => 'https://images.unsplash.com/photo-1534604973900-c43ab4c2e0ab?auto=format&fit=crop&w=200&q=80',
+                'description' => 'Live swimming fresh fish',
+                'parent_slug' => 'fresh-fish'
+            ],
+            [
+                'name' => 'Prawn & Shell Fish',
+                'slug' => 'prawn-shell-fish',
+                'icon' => '🦐',
+                'image' => 'https://images.unsplash.com/photo-1559737558-2f5a35f4523b?auto=format&fit=crop&w=200&q=80',
+                'description' => 'Cleaned prawns & shellfish',
+                'parent_slug' => 'fresh-fish'
+            ],
+            [
+                'name' => 'Fillet',
+                'slug' => 'fillet',
+                'icon' => '🔪',
+                'image' => 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=200&q=80',
+                'description' => 'Boneless fish fillets',
+                'parent_slug' => 'fresh-fish'
+            ],
+            [
+                'name' => 'Premium Fish',
+                'slug' => 'premium-fish',
+                'icon' => '✨',
+                'image' => 'https://images.unsplash.com/photo-1599084993091-1cb5c0721cc6?auto=format&fit=crop&w=200&q=80',
+                'description' => 'Surmai, Pomfret & Salmon',
+                'parent_slug' => 'fresh-fish'
+            ],
+            [
+                'name' => 'Other Fish',
+                'slug' => 'other-fish',
+                'icon' => '🐠',
+                'image' => 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=200&q=80',
+                'description' => 'Assorted regional catch',
+                'parent_slug' => 'fresh-fish'
+            ],
+
+            // 3. Fresh Hilsa
+            [
+                'name' => 'Fresh Hilsa',
+                'slug' => 'fresh-hilsa',
+                'icon' => '👑',
+                'image' => 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=500&q=80',
+                'description' => 'Diamond Harbour Fresh Hilsa (Ilish)',
+                'parent_slug' => null
+            ],
+
+            // 4. Seafood
+            [
+                'name' => 'Seafood',
+                'slug' => 'seafood',
+                'icon' => '🦀',
+                'image' => 'https://images.unsplash.com/photo-1559737558-2f5a35f4523b?auto=format&fit=crop&w=500&q=80',
+                'description' => 'Crabs, Lobsters & Marine Catch',
+                'parent_slug' => null
+            ],
+
+            // 5. Chicken & its Subcategories
+            [
+                'name' => 'Chicken',
                 'slug' => 'chicken',
                 'icon' => '🍗',
                 'image' => 'https://images.unsplash.com/photo-1604503468506-a8da13d82791?auto=format&fit=crop&w=500&q=80',
-                'description' => 'Tender Cuts',
+                'description' => 'Farm Fresh Tender Chicken',
                 'parent_slug' => null
             ],
             [
-                'name' => 'Rich Mutton',
+                'name' => 'Chicken Curry Cuts',
+                'slug' => 'chicken-curry-cuts',
+                'icon' => '🍗',
+                'image' => 'https://images.unsplash.com/photo-1587593810167-a84920ea0781?auto=format&fit=crop&w=200&q=80',
+                'description' => 'Bone-in curry cuts',
+                'parent_slug' => 'chicken'
+            ],
+            [
+                'name' => 'Chicken Boneless',
+                'slug' => 'chicken-boneless',
+                'icon' => '🥩',
+                'image' => 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=200&q=80',
+                'description' => 'Boneless breast & thigh fillets',
+                'parent_slug' => 'chicken'
+            ],
+            [
+                'name' => 'Chicken Special Cuts',
+                'slug' => 'chicken-special-cuts',
+                'icon' => '🍢',
+                'image' => 'https://images.unsplash.com/photo-1604503468506-a8da13d82791?auto=format&fit=crop&w=200&q=80',
+                'description' => 'Drumsticks, wings & lollipop',
+                'parent_slug' => 'chicken'
+            ],
+            [
+                'name' => 'Chicken Liver',
+                'slug' => 'chicken-liver',
+                'icon' => '🫀',
+                'image' => 'https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?auto=format&fit=crop&w=200&q=80',
+                'description' => 'Fresh chicken liver & gizzard',
+                'parent_slug' => 'chicken'
+            ],
+
+            // 6. Mutton & its Subcategories
+            [
+                'name' => 'Mutton',
                 'slug' => 'mutton',
                 'icon' => '🥩',
                 'image' => 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=500&q=80',
-                'description' => 'Premium Goat',
+                'description' => 'Rich Pasture-Raised Goat Meat',
                 'parent_slug' => null
             ],
             [
-                'name' => 'Ready to Cook',
-                'slug' => 'marinades',
-                'icon' => '🍢',
-                'image' => 'https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?auto=format&fit=crop&w=500&q=80',
-                'description' => 'Easy Marinades',
-                'parent_slug' => null
-            ],
-            [
-                'name' => 'Cold Cuts',
-                'slug' => 'cold-cuts',
-                'icon' => '🥓',
-                'image' => 'https://images.unsplash.com/photo-1629450646452-278271dbde1d?auto=format&fit=crop&w=500&q=80',
-                'description' => 'Salamis & Sausages',
-                'parent_slug' => null
-            ],
-            [
-                'name' => 'Super Combos',
-                'slug' => 'combos',
-                'icon' => '🍱',
-                'image' => 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=500&q=80',
-                'description' => 'Value Packs',
-                'parent_slug' => null
-            ],
-            
-            // Subcategories for Fish & Seafood
-            [
-                'name' => 'Seawater Fish',
-                'slug' => 'seawater-fish',
-                'icon' => '🌊',
-                'description' => 'Fresh marine selection',
-                'parent_slug' => 'fish-seafood'
-            ],
-            [
-                'name' => 'Freshwater Fish',
-                'slug' => 'freshwater-fish',
-                'icon' => '🏞️',
-                'description' => 'Sweet river catch',
-                'parent_slug' => 'fish-seafood'
-            ],
-            [
-                'name' => 'Prawns',
-                'slug' => 'prawns',
-                'icon' => '🦐',
-                'description' => 'Cleaned tiger prawns',
-                'parent_slug' => 'fish-seafood'
-            ],
-            [
-                'name' => 'Exotic Catch',
-                'slug' => 'exotic-catch',
-                'icon' => '🐙',
-                'description' => 'Norwegian Salmon etc',
-                'parent_slug' => 'fish-seafood'
-            ],
-
-            // Subcategories for Chicken
-            [
-                'name' => 'Curry Cuts',
-                'slug' => 'chicken-curry-cuts',
-                'icon' => '🍗',
-                'description' => 'Standard curry cuts',
-                'parent_slug' => 'chicken'
-            ],
-            [
-                'name' => 'Boneless & Mince',
-                'slug' => 'chicken-boneless-mince',
-                'icon' => '🥩',
-                'description' => 'Breasts and Keema',
-                'parent_slug' => 'chicken'
-            ],
-
-            // Subcategories for Mutton
-            [
-                'name' => 'Curry Cuts',
+                'name' => 'Mutton Curry Cuts',
                 'slug' => 'mutton-curry-cuts',
                 'icon' => '🍖',
-                'description' => 'Standard mutton cuts',
+                'image' => 'https://images.unsplash.com/photo-1603048588665-791ca8aea617?auto=format&fit=crop&w=200&q=80',
+                'description' => 'Standard goat curry cuts',
                 'parent_slug' => 'mutton'
             ],
             [
-                'name' => 'Keema & Minced',
-                'slug' => 'mutton-keema-minced',
+                'name' => 'Mutton Boneless',
+                'slug' => 'mutton-boneless',
                 'icon' => '🥩',
-                'description' => 'Minced goat meat',
+                'image' => 'https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?auto=format&fit=crop&w=200&q=80',
+                'description' => 'Boneless mutton & keema',
                 'parent_slug' => 'mutton'
             ],
-
-            // Subcategories for Marinades
             [
-                'name' => 'Chicken Marinades',
-                'slug' => 'chicken-marinades',
+                'name' => 'Mutton Special Cuts',
+                'slug' => 'mutton-special-cuts',
                 'icon' => '🍢',
-                'description' => 'Tikkas and kebabs',
-                'parent_slug' => 'marinades'
+                'image' => 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=200&q=80',
+                'description' => 'Goat nalli, chops & ribs',
+                'parent_slug' => 'mutton'
             ],
             [
-                'name' => 'Fish Marinades',
-                'slug' => 'fish-marinades',
-                'icon' => '🐟',
-                'description' => 'Herb-spiced basa',
-                'parent_slug' => 'marinades'
-            ],
-
-            // Subcategories for Cold Cuts
-            [
-                'name' => 'Salami & Sausages',
-                'slug' => 'salami-sausages',
-                'icon' => '🥓',
-                'description' => 'Ready to eat smoked cuts',
-                'parent_slug' => 'cold-cuts'
-            ],
-
-            // Subcategories for Combos
-            [
-                'name' => 'Combo Packs',
-                'slug' => 'combo-packs',
-                'icon' => '🍱',
-                'description' => 'Curated value bundles',
-                'parent_slug' => 'combos'
+                'name' => 'Mutton Liver',
+                'slug' => 'mutton-liver',
+                'icon' => '🫀',
+                'image' => 'https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?auto=format&fit=crop&w=200&q=80',
+                'description' => 'Fresh goat liver (Kaleji)',
+                'parent_slug' => 'mutton'
             ]
         ];
+
+        \Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        Category::truncate();
+        \Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
         $categoryMap = [];
         // First loop: Seed Main categories
@@ -308,7 +339,7 @@ class DatabaseSeeder extends Seeder
             [
                 'product_code' => 'fs-hilsa',
                 'name' => 'Hilsa Fresh Diamond Harbour (1 Pc)* (.980kg-1kg)',
-                'category_slug' => 'fish-seafood',
+                'category_slug' => 'fresh-fish',
                 'sub_category' => 'Seawater Fish',
                 'image' => 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=500&q=80',
                 'price' => 249,
@@ -326,7 +357,7 @@ class DatabaseSeeder extends Seeder
             [
                 'product_code' => 'fs-1',
                 'name' => 'Surmai / Seer King Fish Steaks',
-                'category_slug' => 'fish-seafood',
+                'category_slug' => 'fresh-fish',
                 'sub_category' => 'Seawater Fish',
                 'image' => 'https://images.unsplash.com/photo-1534604973900-c43ab4c2e0ab?auto=format&fit=crop&w=500&q=80',
                 'price' => 649,
@@ -344,7 +375,7 @@ class DatabaseSeeder extends Seeder
             [
                 'product_code' => 'fs-2',
                 'name' => 'White Tiger Prawns - Cleaned & De-veined',
-                'category_slug' => 'fish-seafood',
+                'category_slug' => 'fresh-fish',
                 'sub_category' => 'Prawns',
                 'image' => 'https://images.unsplash.com/photo-1559737558-2f5a35f4523b?auto=format&fit=crop&w=500&q=80',
                 'price' => 399,
@@ -362,7 +393,7 @@ class DatabaseSeeder extends Seeder
             [
                 'product_code' => 'fs-3',
                 'name' => 'Premium Salmon Fillet (Skin On)',
-                'category_slug' => 'fish-seafood',
+                'category_slug' => 'fresh-fish',
                 'sub_category' => 'Exotic Catch',
                 'image' => 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=500&q=80',
                 'price' => 1199,
@@ -380,7 +411,7 @@ class DatabaseSeeder extends Seeder
             [
                 'product_code' => 'fs-4',
                 'name' => 'Freshwater Rohu - Bengali Cut (No Head)',
-                'category_slug' => 'fish-seafood',
+                'category_slug' => 'fresh-fish',
                 'sub_category' => 'Freshwater Fish',
                 'image' => 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=500&q=80',
                 'price' => 249,
@@ -548,7 +579,7 @@ class DatabaseSeeder extends Seeder
                 [
                     'name' => $p['name'],
                     'slug' => $slug,
-                    'category_id' => $categoryMap[$p['category_slug']],
+                    'category_id' => $categoryMap[$p['category_slug']] ?? (reset($categoryMap) ?: 1),
                     'sub_category' => $p['sub_category'],
                     'image' => $p['image'],
                     'price' => $p['price'],
@@ -603,5 +634,38 @@ class DatabaseSeeder extends Seeder
                 $slideData
             );
         }
+
+        // 7. Seed Riders
+        \App\Models\Rider::updateOrCreate(
+            ['phone' => '9820198201'],
+            [
+                'name' => 'Ramesh Shinde',
+                'phone' => '9820198201',
+                'email' => 'ramesh@royalfish.com',
+                'password' => Hash::make('password'),
+                'vehicle_type' => 'Motorbike',
+                'vehicle_number' => 'MH-01-AX-9911',
+                'operating_pincodes' => json_encode(['400001', '400002']),
+                'status' => 'Available',
+                'earnings_per_delivery' => 50,
+                'is_active' => true
+            ]
+        );
+
+        \App\Models\Rider::updateOrCreate(
+            ['phone' => '9820298202'],
+            [
+                'name' => 'Suresh Patil',
+                'phone' => '9820298202',
+                'email' => 'suresh@royalfish.com',
+                'password' => Hash::make('password'),
+                'vehicle_type' => 'EV Delivery Van',
+                'vehicle_number' => 'MH-02-EV-4422',
+                'operating_pincodes' => json_encode(['400003', '400004']),
+                'status' => 'Available',
+                'earnings_per_delivery' => 50,
+                'is_active' => true
+            ]
+        );
     }
 }

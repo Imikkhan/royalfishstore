@@ -81,6 +81,9 @@
                         <input type="checkbox" name="permissions[]" value="orders" class="rounded border-slate-300 text-red-600"> Orders
                     </label>
                     <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer">
+                        <input type="checkbox" name="permissions[]" value="logistics" class="rounded border-slate-300 text-red-600"> Logistics & Fleet
+                    </label>
+                    <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer">
                         <input type="checkbox" name="permissions[]" value="media" class="rounded border-slate-300 text-red-600"> Media Manager
                     </label>
                     <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer">

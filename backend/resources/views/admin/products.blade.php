@@ -29,9 +29,9 @@
                         <th>ID</th>
                         <th>Product</th>
                         <th>Category</th>
-                        <th>Sub-Category</th>
                         <th>Price</th>
-                        <th>Original</th>
+                        <th>Stock</th>
+                        <th>Limits (Min/Max)</th>
                         <th>Weight</th>
                         <th>Status</th>
                         <th>Actions</th>
@@ -45,33 +45,33 @@
 </div>
 
 <!-- Create/Edit Product Modal -->
-<div id="product-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-xs hidden p-4 overflow-y-auto">
-    <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/60 dark:border-slate-800 max-w-2xl w-full shadow-2xl overflow-hidden animate-fadeIn relative my-8">
-        <div class="h-1.5 bg-red-600 w-full"></div>
-        <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-            <h3 id="modal-title" class="font-bold text-slate-800 dark:text-white text-base">Add Product</h3>
-            <button id="close-modal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i class="fa-solid fa-xmark"></i></button>
+<div id="product-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm hidden p-3 sm:p-6">
+    <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/60 dark:border-slate-800 max-w-4xl w-full max-h-[92vh] shadow-2xl overflow-hidden animate-fadeIn relative flex flex-col my-auto">
+        <div class="h-2 bg-red-600 w-full shrink-0"></div>
+        <div class="p-5 sm:px-8 sm:py-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/80 dark:bg-slate-950/60 shrink-0 z-10">
+            <h3 id="modal-title" class="font-extrabold text-slate-900 dark:text-white text-lg sm:text-xl">Add Product</h3>
+            <button type="button" id="close-modal" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl font-bold p-1"><i class="fa-solid fa-xmark"></i></button>
         </div>
-        <form id="product-form" class="p-6 space-y-4" enctype="multipart/form-data">
+        <form id="product-form" class="p-6 sm:p-8 space-y-6 overflow-y-auto flex-1" enctype="multipart/form-data">
             <input type="hidden" id="product-id">
             
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                    <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Product Name</label>
-                    <input type="text" id="product-name" required placeholder="Surmai King Fish Steaks" class="block w-full px-4 py-2 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm">
+                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Product Name</label>
+                    <input type="text" id="product-name" required placeholder="Surmai King Fish Steaks" class="block w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm font-medium">
                 </div>
-                <div class="grid grid-cols-2 gap-2">
+                <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Category</label>
+                        <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Category</label>
                         <select id="product-category" required class="block w-full text-sm">
-                            <option value="">Select</option>
+                            <option value="">Select Category</option>
                             @foreach($categories as $cat)
                                 <option value="{{ $cat->id }}">{{ $cat->name }}</option>
                             @endforeach
                         </select>
                     </div>
                     <div>
-                        <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Sub-Category</label>
+                        <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Sub-Category</label>
                         <select id="product-subcategory" class="block w-full text-sm">
                             <option value="">Select Category First</option>
                         </select>
@@ -79,68 +79,126 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
                 <div>
-                    <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Price (₹)</label>
-                    <input type="number" id="product-price" required placeholder="499" class="block w-full px-4 py-2 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm">
+                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Price (₹)</label>
+                    <input type="number" id="product-price" required placeholder="499" class="block w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm font-medium">
                 </div>
                 <div>
-                    <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Original Price (₹)</label>
-                    <input type="number" id="product-original-price" placeholder="599" class="block w-full px-4 py-2 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm">
+                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Original Price (₹)</label>
+                    <input type="number" id="product-original-price" placeholder="599" class="block w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm font-medium">
                 </div>
                 <div>
-                    <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Weight Metric (e.g. 500g)</label>
-                    <input type="text" id="product-weight" required placeholder="500g" class="block w-full px-4 py-2 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm">
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div>
-                    <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Pieces Detail</label>
-                    <input type="text" id="product-pieces" placeholder="5-7 Steaks" class="block w-full px-4 py-2 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm">
-                </div>
-                <div>
-                    <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Servings Count</label>
-                    <input type="text" id="product-servings" placeholder="Serves 2-3" class="block w-full px-4 py-2 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm">
-                </div>
-                <div>
-                    <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Tags (Comma Separated)</label>
-                    <input type="text" id="product-tags" placeholder="Best Seller, Fresh Catch" class="block w-full px-4 py-2 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm">
+                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Weight Metric (e.g. 500g)</label>
+                    <input type="text" id="product-weight" required placeholder="500g" class="block w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm font-medium">
                 </div>
             </div>
 
-            <div>
-                <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Serviced Pincodes (Comma Separated, e.g. 400001, 400002 or * for All)</label>
-                <input type="text" id="product-pincodes" placeholder="400001, 400002, 110001 (or * for All locations)" class="block w-full px-4 py-2 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm">
-            </div>
-
-            <div>
-                <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Description</label>
-                <textarea id="product-description" rows="3" placeholder="Sourced daily, fresh, cleaned and vacuum packed..." class="block w-full px-4 py-2 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm"></textarea>
-            </div>
-
-            <!-- Image Upload with Preview -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5">Product Image File</label>
-                    <input type="file" id="product-image" accept="image/*" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-100 file:text-slate-700 dark:file:bg-slate-800 dark:file:text-slate-300 hover:file:bg-slate-200 cursor-pointer">
+            <!-- Stock & Purchase Limits Section -->
+            <div class="p-4 bg-slate-50/80 dark:bg-slate-950/50 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800 pb-2">
+                    <h4 class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-boxes-stacked text-amber-500"></i> Stock & Purchase Limits Management
+                    </h4>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <span class="text-xs font-bold text-slate-600 dark:text-slate-400">In Stock:</span>
+                        <input type="checkbox" id="product-in-stock" class="w-4 h-4 text-emerald-600 rounded" checked>
+                    </label>
                 </div>
-                <div class="flex items-center gap-3">
-                    <img id="image-preview" src="https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=500&q=80" alt="Preview" class="w-16 h-16 rounded-xl border border-slate-200 object-cover bg-slate-100">
-                    <div class="space-y-1.5">
-                        <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer">
-                            <input type="checkbox" id="product-bestseller" class="rounded border-slate-300 text-red-600"> Best Seller
-                        </label>
-                        <label class="flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer">
-                            <input type="checkbox" id="product-special" class="rounded border-slate-300 text-red-600"> Today's Special
-                        </label>
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Available Stock</label>
+                        <input type="number" id="product-stock-qty" min="0" value="50" placeholder="50" class="block w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl text-sm font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Low Stock Alert (<)</label>
+                        <input type="number" id="product-low-stock-threshold" min="0" value="5" placeholder="5" class="block w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl text-sm font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Min Order Qty</label>
+                        <input type="number" id="product-min-order-qty" min="1" value="1" placeholder="1" class="block w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl text-sm font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Max Order Qty</label>
+                        <input type="number" id="product-max-order-qty" min="1" value="10" placeholder="10" class="block w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl text-sm font-bold">
                     </div>
                 </div>
             </div>
 
-            <div class="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-2">
-                <button type="button" id="btn-cancel" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-lg transition-colors">Cancel</button>
-                <button type="submit" id="btn-save" class="px-5 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-colors shadow-sm">Save Product</button>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Pieces Detail</label>
+                    <input type="text" id="product-pieces" placeholder="5-7 Steaks" class="block w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm font-medium">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Servings Count</label>
+                    <input type="text" id="product-servings" placeholder="Serves 2-3" class="block w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm font-medium">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Tags (Comma Separated)</label>
+                    <input type="text" id="product-tags" placeholder="Best Seller, Fresh Catch" class="block w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm font-medium">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Serviced Pincodes (Comma Separated, e.g. 400001, 400002 or * for All)</label>
+                <input type="text" id="product-pincodes" placeholder="400001, 400002, 110001 (or * for All locations)" class="block w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm font-medium">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Product Short Description (Card Details)</label>
+                <textarea id="product-short-description" rows="3" placeholder="Gross : 900gms - 1.2kg | Net weight 800g - 1kg&#10;10-12 pieces after cutting." class="block w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm font-medium leading-relaxed"></textarea>
+            </div>
+
+            <div class="bg-slate-50/70 dark:bg-slate-950/40 p-4 rounded-2xl border border-slate-200/60 dark:border-slate-800 space-y-3">
+                <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider"><i class="fa-solid fa-clock text-amber-500 mr-1.5"></i> Delivery Time Slot Selection</label>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <label class="flex items-center gap-3 p-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl cursor-pointer hover:border-red-500/40 text-sm font-semibold text-slate-800 dark:text-slate-200 shadow-xs">
+                        <input type="radio" name="delivery_slot_type" value="morning" data-slot-text="{{ $settings['morning_delivery_slot'] ?? 'Today 07:00 am - 12:00 pm' }}" class="delivery-slot-radio w-4 h-4 text-red-600">
+                        <span>🌅 Morning Slot: <strong class="text-slate-900 dark:text-white ml-1">{{ $settings['morning_delivery_slot'] ?? 'Today 07:00 am - 12:00 pm' }}</strong></span>
+                    </label>
+                    <label class="flex items-center gap-3 p-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl cursor-pointer hover:border-red-500/40 text-sm font-semibold text-slate-800 dark:text-slate-200 shadow-xs">
+                        <input type="radio" name="delivery_slot_type" value="evening" data-slot-text="{{ $settings['evening_delivery_slot'] ?? 'Today 4:00pm - 08:30 pm' }}" class="delivery-slot-radio w-4 h-4 text-red-600" checked>
+                        <span>🌆 Evening Slot: <strong class="text-slate-900 dark:text-white ml-1">{{ $settings['evening_delivery_slot'] ?? 'Today 4:00pm - 08:30 pm' }}</strong></span>
+                    </label>
+                </div>
+                <div>
+                    <input type="text" id="product-delivery-time" value="{{ $settings['evening_delivery_slot'] ?? 'Today 4:00pm - 08:30 pm' }}" placeholder="Or Custom Delivery Time (e.g. Today 4:00pm - 08:30 pm)" class="block w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm font-medium">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Description</label>
+                <textarea id="product-description" rows="4" placeholder="Sourced daily, fresh, cleaned and vacuum packed..." class="block w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm font-medium leading-relaxed"></textarea>
+            </div>
+
+            <!-- Image Upload with Preview -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Product Image File</label>
+                    <input type="file" id="product-image" accept="image/*" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-100 file:text-slate-700 dark:file:bg-slate-800 dark:file:text-slate-300 hover:file:bg-slate-200 cursor-pointer">
+                </div>
+                <div class="flex items-center gap-4">
+                    <img id="image-preview" src="https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=500&q=80" class="w-16 h-16 rounded-xl object-cover border border-slate-200 dark:border-slate-800">
+                    <span class="text-xs text-slate-400">Current display thumbnail</span>
+                </div>
+            </div>
+
+            <!-- Badges flags -->
+            <div class="flex flex-wrap gap-6 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="product-bestseller" class="rounded border-slate-300 text-red-600 focus:ring-red-500">
+                    <span class="text-xs font-bold text-slate-700 dark:text-slate-300">Mark as Best Seller</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="product-special" class="rounded border-slate-300 text-red-600 focus:ring-red-500">
+                    <span class="text-xs font-bold text-slate-700 dark:text-slate-300">Mark as Today's Special</span>
+                </label>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <button type="button" id="btn-cancel" class="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Cancel</button>
+                <button type="submit" class="px-6 py-2.5 rounded-xl bg-red-600 text-white text-xs font-bold hover:bg-red-700 transition-colors shadow-md">Save Product</button>
             </div>
         </form>
     </div>
@@ -179,6 +237,14 @@
             subSelect.trigger('change');
         });
 
+        // Update delivery time input on slot radio change
+        $('.delivery-slot-radio').on('change', function() {
+            let slotText = $(this).attr('data-slot-text');
+            if (slotText) {
+                $('#product-delivery-time').val(slotText);
+            }
+        });
+
         let table = $('#products-table').DataTable({
             ajax: {
                 url: '/admin/products',
@@ -212,9 +278,31 @@
                     }
                 },
                 { data: 'category.name', className: 'font-semibold text-xs' },
-                { data: 'sub_category', className: 'text-xs text-slate-400' },
                 { data: 'price', className: 'font-extrabold text-red-600 dark:text-red-400 text-xs', render: p => '₹' + p },
-                { data: 'original_price', className: 'text-slate-400 line-through text-xs', render: op => op ? '₹' + op : '-' },
+                {
+                    data: null,
+                    render: function(row) {
+                        let qty = row.stock_quantity !== undefined ? row.stock_quantity : 50;
+                        let low = row.low_stock_threshold || 5;
+                        let inStock = row.in_stock !== undefined ? (row.in_stock == 1 || row.in_stock === true) : true;
+                        
+                        if (!inStock || qty <= 0) {
+                            return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400"><i class="fa-solid fa-circle-xmark"></i> Out of Stock (${qty})</span>`;
+                        } else if (qty <= low) {
+                            return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400 animate-pulse"><i class="fa-solid fa-triangle-exclamation"></i> Low: ${qty} left</span>`;
+                        } else {
+                            return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400"><i class="fa-solid fa-circle-check"></i> ${qty} in stock</span>`;
+                        }
+                    }
+                },
+                {
+                    data: null,
+                    render: function(row) {
+                        let min = row.min_order_qty || 1;
+                        let max = row.max_order_qty || 10;
+                        return `<span class="text-[10px] font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">Min: ${min} | Max: ${max}</span>`;
+                    }
+                },
                 { data: 'weight', className: 'font-mono text-xs' },
                 {
                     data: 'is_active',
@@ -287,7 +375,15 @@
             $('#product-id').val('');
             $('#product-category').val('').trigger('change');
             $('#product-subcategory').val('').trigger('change');
+            $('#product-stock-qty').val('50');
+            $('#product-in-stock').prop('checked', true);
+            $('#product-low-stock-threshold').val('5');
+            $('#product-min-order-qty').val('1');
+            $('#product-max-order-qty').val('10');
             $('#product-pincodes').val('*');
+            $('#product-short-description').val('');
+            $('input[name="delivery_slot_type"][value="evening"]').prop('checked', true);
+            $('#product-delivery-time').val("{{ $settings['evening_delivery_slot'] ?? 'Today 4:00pm - 08:30 pm' }}");
             $('#image-preview').attr('src', 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=500&q=80');
         }
 
@@ -328,6 +424,22 @@
             $('#product-weight').val(row.weight || '');
             $('#product-pieces').val(row.pieces || '');
             $('#product-servings').val(row.servings || '');
+            $('#product-short-description').val(row.short_description || '');
+
+            // Stock & Limits
+            $('#product-stock-qty').val(row.stock_quantity !== undefined ? row.stock_quantity : 50);
+            $('#product-in-stock').prop('checked', row.in_stock !== undefined ? (row.in_stock == 1 || row.in_stock === true) : true);
+            $('#product-low-stock-threshold').val(row.low_stock_threshold || 5);
+            $('#product-min-order-qty').val(row.min_order_qty || 1);
+            $('#product-max-order-qty').val(row.max_order_qty || 10);
+
+            let dt = row.delivery_time || "{{ $settings['evening_delivery_slot'] ?? 'Today 4:00pm - 08:30 pm' }}";
+            $('#product-delivery-time').val(dt);
+            if (dt === "{{ $settings['morning_delivery_slot'] ?? 'Today 07:00 am - 12:00 pm' }}") {
+                $('input[name="delivery_slot_type"][value="morning"]').prop('checked', true);
+            } else {
+                $('input[name="delivery_slot_type"][value="evening"]').prop('checked', true);
+            }
             $('#product-description').val(row.description || '');
 
             let tags = [];
@@ -365,10 +477,18 @@
             formData.append('weight', $('#product-weight').val());
             formData.append('pieces', $('#product-pieces').val());
             formData.append('servings', $('#product-servings').val());
+            formData.append('short_description', $('#product-short-description').val() || '');
+            formData.append('delivery_time', $('#product-delivery-time').val() || '');
             formData.append('description', $('#product-description').val());
             formData.append('tags', $('#product-tags').val());
             formData.append('serviced_pincodes', $('#product-pincodes').val() || '*');
             
+            formData.append('stock_quantity', $('#product-stock-qty').val());
+            formData.append('in_stock', $('#product-in-stock').is(':checked') ? '1' : '0');
+            formData.append('low_stock_threshold', $('#product-low-stock-threshold').val());
+            formData.append('min_order_qty', $('#product-min-order-qty').val());
+            formData.append('max_order_qty', $('#product-max-order-qty').val());
+
             let imageFile = $('#product-image')[0].files[0];
             if (imageFile) {
                 formData.append('image', imageFile);

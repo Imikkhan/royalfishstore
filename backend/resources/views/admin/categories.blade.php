@@ -29,6 +29,7 @@
                         <th>ID</th>
                         <th>Category Image</th>
                         <th>Category Name</th>
+                        <th>Icon</th>
                         <th>Level / Parent</th>
                         <th>Slug</th>
                         <th>Status</th>
@@ -56,6 +57,11 @@
             <div>
                 <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Category Name</label>
                 <input type="text" id="category-name" required placeholder="Fish & Seafood" class="block w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm">
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Category Icon (Emoji / Symbol)</label>
+                <input type="text" id="category-icon" placeholder="🐟 or 📦 or 🍗 or 🥩" class="block w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm">
             </div>
 
             <div>
@@ -127,6 +133,13 @@
                     }
                 },
                 { data: 'name', className: 'font-bold' },
+                {
+                    data: 'icon',
+                    className: 'text-center text-lg',
+                    render: function(data, type, row) {
+                        return data ? data : '<span class="text-xs text-slate-300">-</span>';
+                    }
+                },
                 {
                     data: null,
                     render: function(data, type, row) {
@@ -215,6 +228,7 @@
             $('#category-modal').addClass('hidden');
             $('#category-form')[0].reset();
             $('#category-id').val('');
+            $('#category-icon').val('');
             $('#category-parent').val('').trigger('change');
             $('#category-image-preview').attr('src', 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=180&q=80');
         }
@@ -230,6 +244,7 @@
             let row = JSON.parse($(this).attr('data-row'));
             $('#category-id').val(row.id);
             $('#category-name').val(row.name);
+            $('#category-icon').val(row.icon || '');
             $('#category-parent').val(row.parent_id || '').trigger('change');
             $('#category-description').val(row.description || '');
             
@@ -249,6 +264,7 @@
             let formData = new FormData();
             formData.append('parent_id', $('#category-parent').val() || '');
             formData.append('name', $('#category-name').val());
+            formData.append('icon', $('#category-icon').val());
             formData.append('description', $('#category-description').val());
 
             let imageFile = $('#category-image')[0].files[0];

@@ -15,6 +15,8 @@ Route::prefix('admin')->group(function () {
     Route::middleware('guest')->group(function () {
         Route::get('/login', [AdminController::class, 'showLogin'])->name('login');
         Route::post('/login', [AdminController::class, 'login']);
+        Route::post('/send-otp', [AdminController::class, 'sendOtp']);
+        Route::post('/verify-otp', [AdminController::class, 'verifyOtp']);
     });
 
     // Authenticated admin routes
@@ -48,6 +50,12 @@ Route::prefix('admin')->group(function () {
         Route::post('/products/delete', [AdminController::class, 'productsDelete']);
         Route::post('/products/toggle-status', [AdminController::class, 'productsToggleStatus']);
 
+        // Stock & Inventory Management (AJAX)
+        Route::get('/inventory', [AdminController::class, 'inventoryIndex']);
+        Route::post('/inventory/update-stock', [AdminController::class, 'inventoryUpdateStock']);
+        Route::post('/inventory/toggle-stock', [AdminController::class, 'inventoryToggleStock']);
+        Route::post('/inventory/bulk-update', [AdminController::class, 'inventoryBulkUpdate']);
+
         // Orders Tracking (AJAX)
         Route::get('/orders', [AdminController::class, 'ordersIndex']);
         Route::get('/orders/details/{id}', [AdminController::class, 'orderDetails']);
@@ -63,11 +71,93 @@ Route::prefix('admin')->group(function () {
         Route::get('/settings', [AdminController::class, 'settingsIndex']);
         Route::post('/settings/save', [AdminController::class, 'settingsSave']);
 
+        // Facebook Ad Page Manage
+        Route::get('/facebook-ad', [AdminController::class, 'facebookAdIndex']);
+        Route::post('/facebook-ad/save', [AdminController::class, 'facebookAdSave']);
+
         // Hero Banners / Slides (AJAX)
         Route::get('/slides', [AdminController::class, 'slidesIndex']);
         Route::post('/slides/store', [AdminController::class, 'slidesStore']);
         Route::post('/slides/update/{id}', [AdminController::class, 'slidesUpdate']);
         Route::post('/slides/delete', [AdminController::class, 'slidesDelete']);
-        Route::post('/slides/toggle-status', [AdminController::class, 'slidesToggleStatus']);
+
+        // Videos CRUD (AJAX)
+        Route::get('/videos', [AdminController::class, 'videosIndex']);
+        Route::post('/videos/store', [AdminController::class, 'videosStore']);
+        Route::post('/videos/update/{id}', [AdminController::class, 'videosUpdate']);
+        Route::post('/videos/delete', [AdminController::class, 'videosDelete']);
+        Route::post('/videos/toggle-status', [AdminController::class, 'videosToggleStatus']);
+        // Logistics & Shipping Management
+        Route::get('/logistics', [AdminController::class, 'logisticsIndex']);
+        Route::get('/logistics/riders', [AdminController::class, 'ridersIndex']);
+        Route::post('/logistics/riders/store', [AdminController::class, 'ridersStore']);
+        Route::post('/logistics/riders/update/{id}', [AdminController::class, 'ridersUpdate']);
+        Route::post('/logistics/riders/delete', [AdminController::class, 'ridersDelete']);
+        Route::post('/logistics/riders/toggle-status', [AdminController::class, 'ridersToggleStatus']);
+        Route::post('/logistics/assign-rider', [AdminController::class, 'assignRider']);
+        Route::post('/logistics/update-shipment-status', [AdminController::class, 'updateShipmentStatus']);
     });
+});
+
+// Delivery Rider Portal Group
+Route::prefix('rider')->group(function () {
+    Route::get('/login', [\App\Http\Controllers\RiderController::class, 'showLogin'])->name('rider.login');
+    Route::post('/login', [\App\Http\Controllers\RiderController::class, 'login']);
+    Route::post('/send-otp', [\App\Http\Controllers\RiderController::class, 'sendOtp']);
+    Route::post('/verify-otp', [\App\Http\Controllers\RiderController::class, 'verifyOtp']);
+    Route::get('/logout', [\App\Http\Controllers\RiderController::class, 'logout']);
+
+    Route::get('/dashboard', [\App\Http\Controllers\RiderController::class, 'dashboard']);
+    Route::post('/update-status', [\App\Http\Controllers\RiderController::class, 'updateDeliveryStatus']);
+    Route::post('/toggle-duty', [\App\Http\Controllers\RiderController::class, 'toggleDuty']);
+    Route::get('/chat/{orderId}', [\App\Http\Controllers\RiderController::class, 'getChatMessages']);
+    Route::post('/chat/{orderId}', [\App\Http\Controllers\RiderController::class, 'sendChatMessage']);
+});
+
+// Helper utility routes for Server Storage Link & Cache Clear
+Route::get('/run-storage-link', function () {
+    try {
+        \Illuminate\Support\Facades\Artisan::call('storage:link');
+        $target = storage_path('app/public');
+        $shortcut = public_path('storage');
+        if (!file_exists($shortcut) && function_exists('symlink')) {
+            @symlink($target, $shortcut);
+        }
+        return response()->json(['success' => true, 'message' => 'Storage link created successfully!']);
+    } catch (\Exception $e) {
+        return response()->json(['success' => false, 'message' => $e->getMessage()]);
+    }
+});
+
+Route::get('/clear-cache', function () {
+    \Illuminate\Support\Facades\Artisan::call('optimize:clear');
+    return response()->json(['success' => true, 'message' => 'Cache & config cleared successfully!']);
+});
+
+Route::get('/test-whatsapp-live', function (\Illuminate\Http\Request $request, \App\Services\WhatsAppService $service) {
+    $phone = $request->query('phone', '9875411657');
+    $otp = (string) mt_rand(1000, 9999);
+
+    $token = config('services.whatsapp.access_token');
+    $maskedToken = !empty($token) 
+        ? substr($token, 0, 10) . '...' . substr($token, -10) . ' (Length: ' . strlen($token) . ')'
+        : 'MISSING/EMPTY';
+
+    $metaPhoneId = config('services.whatsapp.phone_number_id');
+    $template = config('services.whatsapp.template_name');
+
+    $result = $service->sendOtp($phone, $otp);
+
+    return response()->json([
+        'server_ip' => request()->server('SERVER_ADDR') ?: gethostbyname(gethostname()),
+        'config_check' => [
+            'meta_phone_number_id' => $metaPhoneId,
+            'meta_access_token' => $maskedToken,
+            'meta_template' => $template,
+            'codebey_client_id' => config('services.codebey.client_id'),
+        ],
+        'test_phone' => $phone,
+        'test_otp' => $otp,
+        'send_result' => $result,
+    ], 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 });

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Product } from '../types';
 import { useApp } from '../context/AppContext';
-import { Star, Clock, Plus, Minus, ShoppingCart, Truck } from 'lucide-react';
+import { Snowflake, Plus, Minus, ShoppingCart, Truck } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
@@ -11,18 +11,27 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { navigateTo, addToCart, removeFromCart, getCartQuantity, activePincode } = useApp();
   const quantity = getCartQuantity(product.id);
   const isDeliverable = product.isDeliverable !== false;
+  const isOutOfStock = Boolean(product.isOutOfStock || (product.stockQuantity !== undefined && product.stockQuantity <= 0) || product.inStock === false || (product as any).in_stock === false);
+  const stockQty = product.stockQuantity !== undefined ? Number(product.stockQuantity) : 50;
+  const lowThreshold = Number(product.lowStockThreshold || (product as any).low_stock_threshold || 5);
+  const isLowStock = !isOutOfStock && (Boolean(product.isLowStock) || (stockQty > 0 && stockQty <= lowThreshold));
+  const minQty = Math.max(1, Number(product.minOrderQty || (product as any).min_order_qty || 1));
+  const maxQty = Math.max(1, Number(product.maxOrderQty || (product as any).max_order_qty || 10));
 
-  // Calculate percentage off
-  const discountPercent = Math.round(
-    ((product.originalPrice - product.price) / product.originalPrice) * 100
-  );
+  const originalPrice = Number(product.originalPrice || (product as any).original_price || 0);
+  const price = Number(product.price || 0);
+  const hasDiscount = originalPrice > price && originalPrice > 0;
+  const discountPercent = hasDiscount
+    ? Math.round(((originalPrice - price) / originalPrice) * 100)
+    : 0;
 
   const handleCardClick = () => {
-    navigateTo('product-details', product.id);
+    navigateTo('product-details', product.id, product);
   };
 
   const handleAdd = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isOutOfStock) return;
     addToCart(product);
   };
 
@@ -34,172 +43,149 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   return (
     <div 
       onClick={handleCardClick}
-      className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col justify-between overflow-hidden cursor-pointer group"
+      className={`w-full h-full bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col justify-between overflow-hidden cursor-pointer group select-none ${isOutOfStock ? 'opacity-85' : ''}`}
       id={`product-card-${product.id}`}
     >
       {/* Top Image Container */}
-      <div className="relative aspect-video w-full overflow-hidden bg-gray-50 dark:bg-slate-800">
+      <div className="relative aspect-4/3 w-full overflow-hidden bg-gray-50 dark:bg-slate-800 shrink-0">
         <img
           src={product.image}
           alt={product.name}
           referrerPolicy="no-referrer"
-          className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+          className={`w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500 ${isOutOfStock ? 'grayscale-[40%]' : ''}`}
           loading="lazy"
         />
         
-        {/* Rating overlay */}
-        <div className="absolute bottom-2.5 left-2.5 bg-white/90 dark:bg-slate-900/95 backdrop-blur-xs px-2 py-0.5 rounded-md flex items-center gap-1 text-[10px] font-bold text-gray-800 dark:text-gray-100 shadow-sm">
-          <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
-          <span>{product.rating}</span>
-          <span className="text-gray-400 font-normal">({product.reviewsCount})</span>
-        </div>
+        {/* Top-Left: Snowflake Freshness Badge or Out of Stock Tag */}
+        {isOutOfStock ? (
+          <div className="absolute top-2.5 left-2.5 bg-slate-950/90 text-white text-[10px] font-black px-2.5 py-1 rounded-lg shadow-md uppercase tracking-wider flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span>
+            <span>Sold Out</span>
+          </div>
+        ) : (
+          <div className="absolute top-2.5 left-2.5 bg-[#fc490f] text-white p-1.5 rounded-full shadow-md flex items-center justify-center">
+            <Snowflake className="w-4 h-4 text-white animate-spin-slow" />
+          </div>
+        )}
 
-        {/* Tags Overlay */}
-        {(() => {
-          let tagsArray: string[] = [];
-          if (product.tags) {
-            if (Array.isArray(product.tags)) {
-              tagsArray = product.tags;
-            } else if (typeof product.tags === 'string') {
-              try {
-                const parsed = JSON.parse(product.tags);
-                if (Array.isArray(parsed)) {
-                  tagsArray = parsed;
-                } else {
-                  tagsArray = product.tags.split(',').map(t => t.trim()).filter(Boolean);
-                }
-              } catch (e) {
-                tagsArray = product.tags.split(',').map(t => t.trim()).filter(Boolean);
-              }
-            }
-          }
-          if (tagsArray.length === 0) return null;
-          return (
-            <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5">
-              {tagsArray.slice(0, 1).map((tag, idx) => (
-                <span 
-                  key={idx}
-                  className="bg-red-600 text-white text-[9px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded-md shadow-sm"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          );
-        })()}
-
-        {/* Discount Tag Overlay */}
-        {discountPercent > 0 && (
-          <span className="absolute top-2.5 right-2.5 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-sm">
+        {/* Top-Right: Discount Badge or Low Stock Urgency */}
+        {isOutOfStock ? (
+          <span className="absolute top-2.5 right-2.5 bg-red-600/90 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-sm uppercase tracking-wider">
+            Out of Stock
+          </span>
+        ) : isLowStock ? (
+          <span className="absolute top-2.5 right-2.5 bg-amber-500 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-sm uppercase tracking-wider animate-pulse">
+            Only {stockQty} Left!
+          </span>
+        ) : discountPercent > 0 ? (
+          <span className="absolute top-2.5 right-2.5 bg-[#fc490f] text-white text-xs font-black px-2 py-0.5 rounded-md shadow-sm uppercase tracking-wider">
             {discountPercent}% OFF
           </span>
-        )}
+        ) : null}
       </div>
 
       {/* Product Content Details */}
-      <div className="p-4 flex-1 flex flex-col justify-between gap-3.5">
+      <div className="p-3.5 flex-1 flex flex-col justify-between gap-2.5 overflow-hidden">
         
-        {/* Title, Quantities */}
-        <div className="space-y-2">
-          {/* Larger Font for product title */}
-          <h4 className="font-sans font-extrabold text-gray-950 dark:text-white text-base sm:text-lg line-clamp-2 group-hover:text-red-700 dark:group-hover:text-red-400 transition-colors leading-snug">
+        {/* Title & Weight Specs (Fixed height blocks to prevent content overflow) */}
+        <div className="space-y-1.5 overflow-hidden">
+          <h4 className="font-sans font-extrabold text-gray-900 dark:text-white text-[15px] sm:text-[17px] line-clamp-2 leading-snug group-hover:text-[#fc490f] transition-colors min-h-[2.6rem] overflow-hidden">
             {product.name}
           </h4>
           
-          {/* Metadata Specs (Weight, pieces, servings with larger size and explicit fields like Gross & Net weight) */}
-          <div className="flex flex-col gap-1 text-xs sm:text-[13px] text-gray-600 dark:text-gray-400 font-medium leading-relaxed">
-            <div>
-              <span className="font-bold text-gray-700 dark:text-gray-300">Gross : </span>
-              <span>{product.grossWeight || `${product.weight}`}</span>
-              <span className="mx-1.5">•</span>
-              <span className="font-bold text-gray-700 dark:text-gray-300">Net weight </span>
-              <span>{product.netWeight || (product.weight.includes('500g') ? '450g-480g' : product.weight.includes('250g') ? '220g-240g' : product.weight)}</span>
+          {/* Metadata Specs (Short Description) */}
+          {(product.shortDescription || product.short_description) && (
+            <div className="text-[12.5px] sm:text-xs text-gray-700 dark:text-gray-300 leading-snug min-h-[2.4rem] overflow-hidden font-semibold">
+              <div className="whitespace-pre-line line-clamp-2">
+                {product.shortDescription || product.short_description}
+              </div>
             </div>
-            <div>
-              <span>{product.piecesAfterCutting || (product.pieces !== '1 Fillet' && product.pieces !== 'Finely Minced' ? `${product.pieces} after cutting.` : product.pieces)}</span>
-            </div>
-          </div>
-          
-          <p className="text-xs text-gray-500 dark:text-gray-500 line-clamp-2 leading-relaxed">
-            {product.description}
-          </p>
+          )}
         </div>
 
-        {/* Bottom Price and Addition Trigger row */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between pt-2.5 border-t border-gray-100 dark:border-slate-800">
-            <div className="flex flex-wrap items-baseline gap-2">
-              {/* Turquoise-ish / teal price as in the reference photo */}
-              <span className="text-xl sm:text-2xl font-black text-[#00a6c0] dark:text-[#0da1b9]">
+        {/* Bottom Price & Add to Cart Button (Pinned at bottom) */}
+        <div className="space-y-2.5 pt-2 border-t border-gray-100 dark:border-slate-800 mt-auto shrink-0">
+          <div className="flex items-baseline justify-between gap-1.5 flex-wrap min-h-[1.5rem] overflow-hidden">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-lg font-black text-gray-900 dark:text-white leading-none">
                 ₹{product.price}
               </span>
-              {product.originalPrice > product.price && (
+              {hasDiscount && (
                 <>
-                  <span className="text-sm sm:text-base text-gray-400 dark:text-gray-500 line-through font-semibold">
-                    ₹{product.originalPrice}
+                  <span className="text-xs text-gray-400 line-through font-semibold leading-none">
+                    ₹{originalPrice}
                   </span>
-                  <span className="bg-[#0da1b9] text-white text-[10px] sm:text-[11px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider shadow-2xs">
+                  <span className="text-xs font-black text-[#fc490f] leading-none">
                     {discountPercent}% OFF
                   </span>
                 </>
               )}
             </div>
 
-            {/* Add / Subtract Cart Quantity Control */}
-            <div className="relative shrink-0">
-              {quantity === 0 ? (
-                <button
-                  onClick={handleAdd}
-                  className="bg-[#a80e0e] hover:bg-[#8f0a0a] text-white font-extrabold text-xs sm:text-sm px-4 py-2 rounded-xl flex items-center gap-1.5 transition-all active:scale-95 shadow-sm uppercase tracking-wide cursor-pointer"
-                  id={`add-btn-${product.id}`}
-                >
-                  <span>ADD</span>
-                  <ShoppingCart className="w-4 h-4" />
-                </button>
-              ) : (
-                <div 
-                  className="bg-[#a80e0e] text-white font-bold text-xs sm:text-sm rounded-xl flex items-center shadow-md overflow-hidden border border-[#a80e0e]"
-                  id={`qty-ctrl-${product.id}`}
-                >
-                  <button
-                    onClick={handleSubtract}
-                    className="px-2.5 py-2 hover:bg-[#8f0a0a] active:bg-[#7a0808] transition-colors"
-                    aria-label="Decrease quantity"
-                  >
-                    <Minus className="w-3.5 h-3.5" />
-                  </button>
-                  <span className="px-3 font-sans font-bold select-none min-w-[24px] text-center">
-                    {quantity}
-                  </span>
-                  <button
-                    onClick={handleAdd}
-                    className="px-2.5 py-2 hover:bg-[#8f0a0a] active:bg-[#7a0808] transition-colors"
-                    aria-label="Increase quantity"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              )}
-            </div>
+            {/* Min / Max purchase limit tag if custom */}
+            {(minQty > 1 || maxQty < 10) && !isOutOfStock && (
+              <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                {minQty > 1 ? `Min ${minQty}` : ''}{minQty > 1 && maxQty < 10 ? ' | ' : ''}{maxQty < 10 ? `Max ${maxQty}` : ''}
+              </span>
+            )}
           </div>
 
-          {/* Delivery Box & Pincode Status */}
-          <div className={`flex items-center justify-between gap-2 px-3 py-2 rounded-xl border text-xs font-medium ${
-            isDeliverable 
-              ? 'bg-gray-50 dark:bg-slate-800/80 border-gray-100/60 dark:border-slate-800 text-gray-500 dark:text-gray-400' 
-              : 'bg-amber-50 dark:bg-amber-950/30 border-amber-200/50 text-amber-700 dark:text-amber-400'
-          }`}>
-            <div className="flex items-center gap-1.5 truncate">
-              <Truck className={`w-4 h-4 shrink-0 ${isDeliverable ? 'text-emerald-500' : 'text-amber-500'}`} />
-              <span className="truncate">{isDeliverable ? (product.deliveryTime || '30-45 Mins Express') : `Not in ${activePincode}`}</span>
-            </div>
-            <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 font-mono shrink-0">
-              📍 {activePincode}
-            </span>
+          {/* Full Width Button / Controller */}
+          <div>
+            {isOutOfStock ? (
+              <div 
+                className="w-full bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 font-extrabold text-xs sm:text-sm py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 uppercase tracking-wide cursor-not-allowed select-none border border-slate-200/50 dark:border-slate-700/50"
+                id={`sold-out-btn-${product.id}`}
+              >
+                <span>OUT OF STOCK</span>
+              </div>
+            ) : quantity === 0 ? (
+              <button
+                onClick={handleAdd}
+                className="w-full bg-[#fc490f] hover:bg-orange-600 text-white font-bold text-xs sm:text-sm py-2 px-3 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-xs uppercase tracking-wide cursor-pointer"
+                id={`add-btn-${product.id}`}
+              >
+                <ShoppingCart className="w-4 h-4" />
+                <span>ADD TO CART</span>
+              </button>
+            ) : (
+              <div 
+                className="w-full bg-[#fc490f] text-white font-bold text-xs sm:text-sm rounded-xl flex items-center justify-between shadow-xs overflow-hidden py-1 px-2"
+                id={`qty-ctrl-${product.id}`}
+              >
+                <button
+                  onClick={handleSubtract}
+                  className="p-1 hover:bg-orange-600 rounded-lg transition-colors"
+                  aria-label="Decrease quantity"
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+                <span className="font-bold text-xs sm:text-sm px-1">
+                  {quantity} in Cart
+                </span>
+                <button
+                  onClick={handleAdd}
+                  disabled={quantity >= stockQty || quantity >= maxQty}
+                  className={`p-1 rounded-lg transition-colors ${quantity >= stockQty || quantity >= maxQty ? 'opacity-40 cursor-not-allowed' : 'hover:bg-orange-600'}`}
+                  aria-label="Increase quantity"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
+
+          {/* Delivery Time Slot Footer */}
+          {(product.deliveryTime || product.delivery_time) && (
+            <div className="pt-2 border-t border-gray-100 dark:border-slate-800 flex items-center justify-center gap-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300">
+              <Truck className="w-4 h-4 text-[#00a6c0] dark:text-[#0da1b9] shrink-0" />
+              <span>{product.deliveryTime || product.delivery_time}</span>
+            </div>
+          )}
         </div>
 
       </div>
     </div>
   );
 };
+

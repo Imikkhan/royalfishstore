@@ -3,6 +3,7 @@ import { AppProvider, useApp } from './context/AppContext';
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
 import { Sidebar } from './components/Sidebar';
+import { OrderSuccessModal } from './components/OrderSuccessModal';
 import { Home } from './pages/Home';
 import { ProductDetails } from './pages/ProductDetails';
 import { Cart } from './pages/Cart';
@@ -10,20 +11,9 @@ import { Profile } from './pages/Profile';
 import { Login } from './pages/Login';
 import { CategoryView } from './pages/CategoryView';
 import { Categories } from './pages/Categories';
-import { ShieldCheck, Flame, Compass, Award, Heart } from 'lucide-react';
-
-const CITIES = [
-  'Bengaluru', 'NCR Delhi', 'Hyderabad', 'Chandigarh', 'Panchkula', 'Mohali', 
-  'Mumbai', 'Pune', 'Chennai', 'Coimbatore', 'Jaipur', 'Cochin', 'Vijayawada', 
-  'Visakhapatnam', 'Kolkata', 'Lucknow', 'Kanpur', 'Nagpur'
-];
-
-const SEARCHES = [
-  'Chicken Curry Cut', 'Boneless Chicken Breast', 'Surmai King Fish Steaks', 
-  'White Tiger Prawns', 'Norwegian Salmon Fillet', 'Rohu Bengali Cut', 
-  'Goat Curry Cut', 'Premium Mutton Keema', 'Tandoori Tikka Marinade', 
-  'Chicken Salami Slices', 'Fish Fry & Curry Combo', 'Ready to Cook Platters'
-];
+import { SearchPage } from './pages/Search';
+import { Onepager } from './pages/Onepager';
+import { ShieldCheck, Snowflake, Zap, Leaf } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   const { currentPage } = useApp();
@@ -34,6 +24,8 @@ const AppContent: React.FC = () => {
     switch (currentPage) {
       case 'home':
         return <Home />;
+      case 'onepager':
+        return <Onepager />;
       case 'product-details':
         return <ProductDetails />;
       case 'cart':
@@ -46,6 +38,8 @@ const AppContent: React.FC = () => {
         return <CategoryView />;
       case 'categories':
         return <Categories />;
+      case 'search':
+        return <SearchPage />;
       default:
         return <Home />;
     }
@@ -61,7 +55,11 @@ const AppContent: React.FC = () => {
       <Header onOpenSidebar={() => setSidebarOpen(true)} />
 
       {/* 4. Main viewport context frame */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-12">
+      <main className={`flex-1 w-full mx-auto ${
+        currentPage === 'onepager'
+          ? 'p-0 max-w-none'
+          : 'max-w-7xl px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-12'
+      }`}>
         {renderPage()}
       </main>
 
@@ -72,21 +70,8 @@ const AppContent: React.FC = () => {
           {/* Brand Introduction Section */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start border-b border-gray-50 dark:border-slate-800/60 pb-8">
             <div className="md:col-span-4 space-y-3 text-center md:text-left">
-              <div className="flex items-center gap-3 justify-center md:justify-start">
-                <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-tr from-[#7e0a0a] via-[#a80e0e] to-[#c21818] shadow-md border border-amber-400/25 shrink-0 overflow-hidden">
-                  <div className="absolute inset-0 rounded-xl border border-amber-400/10" />
-                  <svg className="w-6 h-6 text-amber-400 drop-shadow-md" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 2a10 10 0 0 1 8 16" stroke="currentColor" strokeDasharray="3 3" />
-                    <path d="M20 18a10 10 0 0 1-16-6" stroke="currentColor" />
-                    <path d="M2 12l2-2 2 2" stroke="currentColor" />
-                    <path d="M8 12c1-2 3.5-3.5 6.5-3.5 2.5 0 4.5 1.5 5.5 3-1 1.5-3 3-5.5 3-3 0-5.5-1.5-6.5-3z" fill="currentColor" stroke="none" />
-                    <path d="M8 12l-3-2v4z" fill="currentColor" stroke="none" />
-                    <circle cx="16" cy="11.5" r="0.75" fill="#7e0a0a" />
-                  </svg>
-                </div>
-                <span className="font-sans font-black text-[#a80e0e] dark:text-[#f87171] tracking-tight text-lg">
-                  ROYAL FISH STORE
-                </span>
+              <div className="flex items-center justify-center md:justify-start">
+                <img src="/logo.png" alt="Royal Fish Store Logo" className="h-12 w-auto object-contain" />
               </div>
               <p className="text-[11px] leading-relaxed">
                 Royal Fish Store (royalfishstore.com) is your premium meat and seafood home delivery companion, heavily inspired by the standards of Licious. We offer freshly-caught seafood, pasture-raised country chicken, and selected cuts of mutton vacuum-sealed and delivered cooled under 4°C directly to your doorstep.
@@ -94,61 +79,38 @@ const AppContent: React.FC = () => {
             </div>
 
             {/* Quick stats / guarantees */}
-            <div className="md:col-span-8 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-              <div className="p-3 bg-red-50/20 dark:bg-slate-800/20 rounded-xl border border-red-100/10">
-                <span className="text-xl block mb-1">🧼</span>
-                <strong className="text-gray-800 dark:text-gray-200 block text-xs">Sanitized Packing</strong>
-                <span className="text-[10px] opacity-85 block">ISO 22000 certified</span>
+            <div className="md:col-span-8 grid grid-cols-2 sm:grid-cols-4 gap-3.5 text-center">
+              <div className="p-3.5 bg-gray-50/80 dark:bg-slate-800/50 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/20 rounded-2xl border border-gray-100 dark:border-slate-800 transition-all duration-300 group">
+                <div className="w-10 h-10 mx-auto rounded-xl bg-emerald-100/70 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2 shadow-xs group-hover:scale-110 transition-transform">
+                  <ShieldCheck className="w-5 h-5 stroke-[2.5]" />
+                </div>
+                <strong className="text-gray-900 dark:text-white block text-xs font-extrabold">Sanitized Packing</strong>
+                <span className="text-[10px] text-gray-500 dark:text-gray-400 block mt-0.5 font-medium">ISO 22000 certified</span>
               </div>
-              <div className="p-3 bg-red-50/20 dark:bg-slate-800/20 rounded-xl border border-red-100/10">
-                <span className="text-xl block mb-1">🧊</span>
-                <strong className="text-gray-800 dark:text-gray-200 block text-xs">Cold-chain Preserved</strong>
-                <span className="text-[10px] opacity-85 block">Cooled strictly 0-4°C</span>
-              </div>
-              <div className="p-3 bg-red-50/20 dark:bg-slate-800/20 rounded-xl border border-red-100/10">
-                <span className="text-xl block mb-1">⏰</span>
-                <strong className="text-gray-800 dark:text-gray-200 block text-xs">45 Min Express</strong>
-                <span className="text-[10px] opacity-85 block">Fast local dispatch</span>
-              </div>
-              <div className="p-3 bg-red-50/20 dark:bg-slate-800/20 rounded-xl border border-red-100/10">
-                <span className="text-xl block mb-1">🍗</span>
-                <strong className="text-gray-800 dark:text-gray-200 block text-xs">100% Antibiotic Free</strong>
-                <span className="text-[10px] opacity-85 block">Pure natural feed only</span>
-              </div>
-            </div>
-          </div>
 
-          {/* Cities We Serve Grid */}
-          <div className="space-y-2.5">
-            <span className="font-sans font-bold text-gray-800 dark:text-gray-200 block text-xs uppercase tracking-wider">
-              🌆 Cities We Serve (Super-Fast Home Delivery)
-            </span>
-            <div className="flex flex-wrap gap-2 text-[11px] font-medium">
-              {CITIES.map(city => (
-                <span 
-                  key={city} 
-                  className="bg-gray-50 hover:bg-red-50 dark:bg-slate-800 dark:hover:bg-slate-700/60 text-gray-600 dark:text-gray-400 px-2.5 py-1 rounded-md transition-colors"
-                >
-                  {city}
-                </span>
-              ))}
-            </div>
-          </div>
+              <div className="p-3.5 bg-gray-50/80 dark:bg-slate-800/50 hover:bg-blue-50/50 dark:hover:bg-blue-950/20 rounded-2xl border border-gray-100 dark:border-slate-800 transition-all duration-300 group">
+                <div className="w-10 h-10 mx-auto rounded-xl bg-blue-100/70 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-2 shadow-xs group-hover:scale-110 transition-transform">
+                  <Snowflake className="w-5 h-5 stroke-[2.5]" />
+                </div>
+                <strong className="text-gray-900 dark:text-white block text-xs font-extrabold">Cold-chain Preserved</strong>
+                <span className="text-[10px] text-gray-500 dark:text-gray-400 block mt-0.5 font-medium">Cooled strictly 0-4°C</span>
+              </div>
 
-          {/* Popular Searches */}
-          <div className="space-y-2.5">
-            <span className="font-sans font-bold text-gray-800 dark:text-gray-200 block text-xs uppercase tracking-wider">
-              🔎 Popular fresh meats searched online
-            </span>
-            <div className="flex flex-wrap gap-1.5 text-[10px]">
-              {SEARCHES.map(term => (
-                <span 
-                  key={term} 
-                  className="border border-gray-100 dark:border-slate-800 text-gray-500 px-2 py-0.5 rounded-full"
-                >
-                  {term}
-                </span>
-              ))}
+              <div className="p-3.5 bg-gray-50/80 dark:bg-slate-800/50 hover:bg-amber-50/50 dark:hover:bg-amber-950/20 rounded-2xl border border-gray-100 dark:border-slate-800 transition-all duration-300 group">
+                <div className="w-10 h-10 mx-auto rounded-xl bg-amber-100/70 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-2 shadow-xs group-hover:scale-110 transition-transform">
+                  <Zap className="w-5 h-5 stroke-[2.5]" />
+                </div>
+                <strong className="text-gray-900 dark:text-white block text-xs font-extrabold">45 Min Express</strong>
+                <span className="text-[10px] text-gray-500 dark:text-gray-400 block mt-0.5 font-medium">Fast local dispatch</span>
+              </div>
+
+              <div className="p-3.5 bg-gray-50/80 dark:bg-slate-800/50 hover:bg-orange-50/50 dark:hover:bg-orange-950/20 rounded-2xl border border-gray-100 dark:border-slate-800 transition-all duration-300 group">
+                <div className="w-10 h-10 mx-auto rounded-xl bg-orange-100/70 dark:bg-orange-950/50 text-[#fc490f] flex items-center justify-center mb-2 shadow-xs group-hover:scale-110 transition-transform">
+                  <Leaf className="w-5 h-5 stroke-[2.5]" />
+                </div>
+                <strong className="text-gray-900 dark:text-white block text-xs font-extrabold">100% Antibiotic Free</strong>
+                <span className="text-[10px] text-gray-500 dark:text-gray-400 block mt-0.5 font-medium">Pure natural feed only</span>
+              </div>
             </div>
           </div>
 
@@ -183,7 +145,10 @@ const AppContent: React.FC = () => {
         </div>
       </footer>
 
-      {/* 6. Sticky bottom mobile navigation bar (Only active on md:hidden mobile screen layout) */}
+      {/* 6. Instant Order Placed Celebration Modal */}
+      <OrderSuccessModal />
+
+      {/* 7. Sticky bottom mobile navigation bar (Only active on md:hidden mobile screen layout) */}
       <BottomNav />
 
     </div>

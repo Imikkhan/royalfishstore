@@ -74,7 +74,9 @@ export const CategoryView: React.FC = () => {
       : String(product.category || '');
       
     const matchesCategory = prodCatSlug === selectedCategory || 
-      prodCatSlug.toLowerCase().replace(/[^a-z0-9]/g, '') === selectedCategory.toLowerCase().replace(/[^a-z0-9]/g, '');
+      prodCatSlug.toLowerCase().replace(/[^a-z0-9]/g, '') === selectedCategory.toLowerCase().replace(/[^a-z0-9]/g, '') ||
+      (selectedCategory === 'fresh-fish' && (prodCatSlug === 'fish-seafood' || prodCatSlug === 'wholesale-fish')) ||
+      (selectedCategory === 'fish-seafood' && (prodCatSlug === 'fresh-fish' || prodCatSlug === 'wholesale-fish'));
     
     const subCat = product.subCategory || product.sub_category;
     const matchesSubCategory = selectedSubCategory && selectedSubCategory !== 'All'
@@ -90,14 +92,37 @@ export const CategoryView: React.FC = () => {
     return matchesCategory && matchesSubCategory && matchesSearch;
   });
 
-  const subcats = SUBCATEGORIES[selectedCategory] || ['All'];
+  const dynamicSubcatsList = categories.filter(c => {
+    if (!c.parent_id) return false;
+    if (categoryDetails && (c.parent_id === categoryDetails.id || c.parent_id === categoryDetails.slug)) return true;
+    if (c.parent_slug && c.parent_slug === selectedCategory) return true;
+    return String(c.parent_id) === String(selectedCategory);
+  });
+
+  const subcats = dynamicSubcatsList.length > 0 
+    ? ['All', ...dynamicSubcatsList.map(sc => sc.name)]
+    : (SUBCATEGORIES[selectedCategory] || ['All']);
+
+  // Helper: resolve relative image URLs to absolute using the API domain
+  const API_DOMAIN = (window as any).__API_DOMAIN__ || 'https://royalfishstore.com';
+  const resolveImg = (img: string) => {
+    if (!img) return '';
+    if (img.startsWith('http://') || img.startsWith('https://')) return img;
+    return `${API_DOMAIN}${img.startsWith('/') ? '' : '/'}${img}`;
+  };
 
   const getSubcategoryImage = (sub: string) => {
+    // For "All", use the parent category's own image (from API categories data)
     if (sub === 'All') {
-      return SUBCATEGORY_IMAGES[`All-${selectedCategory}`] || SUBCATEGORY_IMAGES['All-chicken'];
+      if (categoryDetails?.image) return resolveImg(categoryDetails.image);
+      return SUBCATEGORY_IMAGES[`All-${selectedCategory}`] || 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=180&q=80';
     }
-    // Fallback search
-    return SUBCATEGORY_IMAGES[sub] || SUBCATEGORY_IMAGES[`All-${selectedCategory}`] || 'https://images.unsplash.com/photo-1604503468506-a8da13d82791?auto=format&fit=crop&w=150&q=80';
+    // For dynamic subcategories, use their uploaded image from the API
+    const foundSubObj = dynamicSubcatsList.find(sc => sc.name === sub);
+    if (foundSubObj && foundSubObj.image) {
+      return resolveImg(foundSubObj.image);
+    }
+    return SUBCATEGORY_IMAGES[sub] || SUBCATEGORY_IMAGES[`All-${selectedCategory}`] || 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=150&q=80';
   };
 
   return (
@@ -143,31 +168,10 @@ export const CategoryView: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Stylish Premium Promotion Banner (Licious Red/Pink Tinted Banner) */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-rose-500/10 via-pink-500/5 to-rose-600/5 dark:from-red-950/20 dark:to-slate-900 border border-red-100/40 dark:border-slate-800/80 p-5 sm:p-6 flex items-center justify-between select-none">
-        <div className="space-y-1.5 max-w-lg">
-          <div className="inline-flex items-center gap-1 bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-400 text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-0.5 rounded-full">
-            <Sparkles className="w-3 h-3 animate-pulse" /> Certified Fresh
-          </div>
-          <h2 className="text-base sm:text-lg font-black text-gray-900 dark:text-white tracking-tight">
-            {slogan}
-          </h2>
-          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-            Strict 150-point quality check, double-chilled transit, 100% fresh meat.
-          </p>
-        </div>
-        <div className="hidden md:block">
-          <img 
-            src="https://images.unsplash.com/photo-1603048588665-791ca8aea617?auto=format&fit=crop&w=150&q=80"
-            alt="Sealed Premium Meat Pack"
-            className="w-20 h-20 rounded-full object-cover border-4 border-white dark:border-slate-800 shadow-md transform rotate-6"
-            referrerPolicy="no-referrer"
-          />
-        </div>
-      </div>
+
 
       {/* 3. Subcategories Circular Row (Exact Licious Design!) */}
-      <div className="space-y-3.5 py-2">
+      <div className="space-y-3 py-1">
         <div className="flex items-center justify-between px-1">
           <span className="text-[11px] sm:text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">
             Select Your Preferred Cut Style
@@ -182,35 +186,44 @@ export const CategoryView: React.FC = () => {
           )}
         </div>
 
-        {/* Circular Subcategories Grid / List */}
-        <div className="flex gap-4 sm:gap-6 overflow-x-auto pb-2 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
+        {/* Circular Subcategories Grid / List with safe padding to prevent border/ring clipping on mobile */}
+        <div className="flex gap-4 sm:gap-6 overflow-x-auto pt-2 pb-3.5 px-4 sm:px-2 scrollbar-none -mx-4 sm:mx-0 items-start">
           {subcats.map(sub => {
             const isActive = (selectedSubCategory === sub) || (!selectedSubCategory && sub === 'All');
-            const imgUrl = getSubcategoryImage(sub);
+            const imgUrl = sub !== 'All' ? getSubcategoryImage(sub) : null;
             
             return (
               <button
                 key={sub}
                 onClick={() => setSelectedSubCategory(sub === 'All' ? null : sub)}
-                className="flex flex-col items-center gap-2 group focus:outline-none shrink-0 w-[76px] sm:w-[90px]"
+                className="flex flex-col items-center gap-2 group focus:outline-none shrink-0 w-[76px] sm:w-[90px] pt-1"
                 id={`subcat-${sub.replace(/\s+/g, '-').toLowerCase()}`}
               >
-                {/* Circular image with active ring */}
+                {/* Circular image / icon with active ring */}
                 <div 
-                  className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 transition-all duration-300 relative shadow-sm ${
+                  className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 transition-all duration-300 relative shadow-sm flex items-center justify-center ${
                     isActive 
                       ? 'border-red-600 ring-4 ring-red-100 dark:ring-red-950/30 scale-105' 
                       : 'border-gray-100 dark:border-slate-800 group-hover:border-red-300 group-hover:scale-105'
-                  }`}
+                  } ${sub === 'All' ? 'bg-red-50 dark:bg-red-950/20' : 'overflow-hidden'}`}
                 >
-                  <img 
-                    src={imgUrl} 
-                    alt={sub} 
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-300"
-                  />
-                  {isActive && (
-                    <div className="absolute inset-0 bg-red-600/10 dark:bg-red-500/10 mix-blend-multiply" />
+                  {sub === 'All' ? (
+                    /* Show a simple grid icon for "All" — no image */
+                    <svg xmlns="http://www.w3.org/2000/svg" className={`w-7 h-7 sm:w-8 sm:h-8 transition-colors ${isActive ? 'text-red-600' : 'text-gray-400 group-hover:text-red-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                    </svg>
+                  ) : (
+                    <>
+                      <img 
+                        src={imgUrl!} 
+                        alt={sub} 
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-300"
+                      />
+                      {isActive && (
+                        <div className="absolute inset-0 bg-red-600/10 dark:bg-red-500/10 mix-blend-multiply" />
+                      )}
+                    </>
                   )}
                 </div>
 
@@ -228,25 +241,25 @@ export const CategoryView: React.FC = () => {
         </div>
       </div>
 
-      {/* 4. Controls & Filters Indicator bar */}
+      {/* 4. Controls & Filters Indicator bar (Mobile friendly horizontal scroll with whitespace-nowrap) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-b border-gray-100 dark:border-slate-800/60 py-3 select-none">
         <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
           <span className="font-extrabold text-gray-800 dark:text-white">{filteredProducts.length} Items</span>
           <span>available in this category</span>
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-          <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-50 hover:bg-gray-100 dark:bg-slate-800/50 dark:hover:bg-slate-800 text-[11px] font-bold text-gray-700 dark:text-gray-300 border border-gray-150 dark:border-slate-800 transition-all">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
+          <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-50 hover:bg-gray-100 dark:bg-slate-800/50 dark:hover:bg-slate-800 text-[11px] font-bold text-gray-700 dark:text-gray-300 border border-gray-150 dark:border-slate-800 transition-all shrink-0 whitespace-nowrap">
             <Filter className="w-3 h-3" />
             <span>Filters</span>
           </button>
           
-          <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-50 hover:bg-gray-100 dark:bg-slate-800/50 dark:hover:bg-slate-800 text-[11px] font-bold text-gray-700 dark:text-gray-300 border border-gray-150 dark:border-slate-800 transition-all">
+          <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-50 hover:bg-gray-100 dark:bg-slate-800/50 dark:hover:bg-slate-800 text-[11px] font-bold text-gray-700 dark:text-gray-300 border border-gray-150 dark:border-slate-800 transition-all shrink-0 whitespace-nowrap">
             <ArrowUpDown className="w-3 h-3" />
             <span>Price: Low to High</span>
           </button>
 
-          <div className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 border border-emerald-100/40 dark:border-emerald-950/30">
+          <div className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 border border-emerald-100/40 dark:border-emerald-950/30 shrink-0 whitespace-nowrap">
             <span>⚡ Express delivery (45m)</span>
           </div>
         </div>

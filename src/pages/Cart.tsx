@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { ShoppingCart, Trash2, Tag, Truck, CreditCard, ChevronRight, CheckCircle, Smartphone, Globe, Landmark, MapPin, Plus, X } from 'lucide-react';
+import { ShoppingCart, Trash2, Tag, Truck, CreditCard, ChevronRight, CheckCircle, Smartphone, Globe, Landmark, MapPin, Plus, X, Loader2 } from 'lucide-react';
 
 export const Cart: React.FC = () => {
   const {
@@ -14,6 +14,8 @@ export const Cart: React.FC = () => {
     couponCode,
     applyCoupon,
     cartTotal,
+    minOrderAmount,
+    freeDeliveryThreshold,
     addresses,
     addAddress,
     selectedAddressId,
@@ -21,8 +23,11 @@ export const Cart: React.FC = () => {
     selectedPaymentMethod,
     setSelectedPaymentMethod,
     placeOrder,
+    isPlacingOrder,
     navigateTo,
-    activePincode
+    activePincode,
+    user,
+    showToast
   } = useApp();
 
   const [couponInput, setCouponInput] = useState('');
@@ -57,7 +62,7 @@ export const Cart: React.FC = () => {
   const handleAddAddress = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newAddrName || !newAddrLine || !newAddrCity || !newAddrZip || !newAddrPhone) {
-      alert('Please fill out all address fields!');
+      showToast('Please fill out all address fields!', 'warning');
       return;
     }
 
@@ -138,65 +143,89 @@ export const Cart: React.FC = () => {
 
             {/* List */}
             <div className="divide-y divide-gray-50 dark:divide-slate-800/40">
-              {cart.map(item => (
-                <div key={item.product.id} className="py-4 flex items-start justify-between gap-3 group">
-                  <div className="flex items-start gap-3">
-                    {/* Tiny Image */}
-                    <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-gray-100 dark:border-slate-800">
-                      <img
-                        src={item.product.image}
-                        alt={item.product.name}
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                    </div>
-                    
-                    {/* Content */}
-                    <div className="space-y-0.5">
-                      <h4 className="font-sans font-bold text-gray-800 dark:text-gray-200 text-sm leading-tight group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
-                        {item.product.name}
-                      </h4>
-                      <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-medium">
-                        <span>{item.product.weight}</span>
-                        <span>•</span>
-                        <span>{item.product.pieces}</span>
-                      </div>
-                      <div className="text-xs font-bold text-gray-900 dark:text-white mt-1">
-                        ₹{item.product.price} <span className="text-[10px] text-gray-400 font-normal">per pack</span>
-                      </div>
-                    </div>
-                  </div>
+              {cart.map(item => {
+                const stockQty = item.product.stockQuantity !== undefined ? Number(item.product.stockQuantity) : 999;
+                const maxQty = Math.max(1, Number(item.product.maxOrderQty || (item.product as any).max_order_qty || 10));
+                const minQty = Math.max(1, Number(item.product.minOrderQty || (item.product as any).min_order_qty || 1));
+                const isOutOfStock = Boolean(item.product.isOutOfStock || stockQty <= 0);
 
-                  {/* Quantity and Line Total */}
-                  <div className="text-right space-y-2 shrink-0">
-                    <span className="text-sm font-extrabold text-gray-900 dark:text-white block">
-                      ₹{item.product.price * item.quantity}
-                    </span>
-                    
-                    {/* Counter control */}
-                    <div className="bg-red-50 dark:bg-slate-800 border border-red-200 dark:border-slate-700 text-red-600 dark:text-red-400 font-bold text-xs rounded-lg flex items-center select-none overflow-hidden">
-                      <button
-                        onClick={() => removeFromCart(item.product.id)}
-                        className="px-2 py-1 hover:bg-red-100 dark:hover:bg-slate-700 transition-colors"
-                        aria-label="Decrease"
-                      >
-                        -
-                      </button>
-                      <span className="px-2 font-mono text-center min-w-[16px]">
-                        {item.quantity}
+                return (
+                  <div key={item.product.id} className="py-4 flex items-start justify-between gap-3 group">
+                    <div className="flex items-start gap-3">
+                      {/* Tiny Image */}
+                      <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-gray-100 dark:border-slate-800">
+                        <img
+                          src={item.product.image}
+                          alt={item.product.name}
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      </div>
+                      
+                      {/* Content */}
+                      <div className="space-y-0.5">
+                        <h4 className="font-sans font-bold text-gray-800 dark:text-gray-200 text-sm leading-tight group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
+                          {item.product.name}
+                        </h4>
+                        {(item.product.shortDescription || item.product.short_description) && (
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2 leading-tight">
+                            {item.product.shortDescription || item.product.short_description}
+                          </p>
+                        )}
+                        <div className="text-xs font-bold text-gray-900 dark:text-white mt-1 flex items-center gap-2">
+                          <span>₹{item.product.price}</span>
+                          {(minQty > 1 || maxQty < 10) && (
+                            <span className="text-[10px] text-slate-400 font-normal">
+                              ({minQty > 1 ? `Min: ${minQty}` : ''}{minQty > 1 && maxQty < 10 ? ' | ' : ''}{maxQty < 10 ? `Max: ${maxQty}` : ''})
+                            </span>
+                          )}
+                        </div>
+
+                        {item.quantity >= maxQty && (
+                          <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 block mt-0.5">
+                            Max purchase limit ({maxQty}) reached
+                          </span>
+                        )}
+                        {stockQty < item.quantity && (
+                          <span className="text-[10px] font-bold text-red-600 dark:text-red-400 block mt-0.5">
+                            Only {stockQty} units available in inventory!
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Quantity and Line Total */}
+                    <div className="text-right space-y-2 shrink-0">
+                      <span className="text-sm font-extrabold text-gray-900 dark:text-white block">
+                        ₹{item.product.price * item.quantity}
                       </span>
-                      <button
-                        onClick={() => addToCart(item.product)}
-                        className="px-2 py-1 hover:bg-red-100 dark:hover:bg-slate-700 transition-colors"
-                        aria-label="Increase"
-                      >
-                        +
-                      </button>
+                      
+                      {/* Counter control */}
+                      <div className="bg-red-50 dark:bg-slate-800 border border-red-200 dark:border-slate-700 text-red-600 dark:text-red-400 font-bold text-xs rounded-lg flex items-center select-none overflow-hidden">
+                        <button
+                          onClick={() => removeFromCart(item.product.id)}
+                          className="px-2 py-1 hover:bg-red-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                          aria-label="Decrease"
+                        >
+                          -
+                        </button>
+                        <span className="px-2 font-mono text-center min-w-[16px]">
+                          {item.quantity}
+                        </span>
+                        <button
+                          onClick={() => addToCart(item.product)}
+                          disabled={item.quantity >= stockQty || item.quantity >= maxQty}
+                          className={`px-2 py-1 transition-colors ${item.quantity >= stockQty || item.quantity >= maxQty ? 'opacity-40 cursor-not-allowed' : 'hover:bg-red-100 dark:hover:bg-slate-700 cursor-pointer'}`}
+                          aria-label="Increase"
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -625,6 +654,27 @@ export const Cart: React.FC = () => {
               Order Cost Summary
             </h3>
 
+            {/* Minimum Order Amount Alert Banner */}
+            {cartSubtotal < minOrderAmount && minOrderAmount > 0 && (
+              <div className="p-3.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded-xl space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold text-amber-800 dark:text-amber-300">
+                  <span className="flex items-center gap-1.5">
+                    ⚠️ Minimum Order: ₹{minOrderAmount}
+                  </span>
+                  <span>₹{minOrderAmount - cartSubtotal} more needed</span>
+                </div>
+                <div className="w-full bg-amber-200/60 dark:bg-amber-900/40 h-2 rounded-full overflow-hidden">
+                  <div 
+                    className="bg-amber-500 h-full rounded-full transition-all duration-300"
+                    style={{ width: `${Math.min(100, Math.round((cartSubtotal / minOrderAmount) * 100))}%` }}
+                  ></div>
+                </div>
+                <p className="text-[10.5px] text-amber-700 dark:text-amber-400 leading-tight">
+                  Add items worth ₹{minOrderAmount - cartSubtotal} more to your basket to proceed with checkout.
+                </p>
+              </div>
+            )}
+
             <div className="space-y-2 text-xs">
               <div className="flex justify-between text-gray-600 dark:text-gray-400">
                 <span>Cart Subtotal</span>
@@ -649,9 +699,9 @@ export const Cart: React.FC = () => {
                 )}
               </div>
 
-              {deliveryFee > 0 && (
+              {deliveryFee > 0 && freeDeliveryThreshold > cartSubtotal && (
                 <p className="text-[10px] text-amber-600 font-medium">
-                  Add ₹{499 - cartSubtotal} more to get <strong>Free Insulated Shipping</strong>!
+                  Add ₹{freeDeliveryThreshold - cartSubtotal} more to get <strong>Free Insulated Shipping</strong>!
                 </p>
               )}
 
@@ -679,11 +729,38 @@ export const Cart: React.FC = () => {
             {/* Main Action Trigger */}
             <button
               onClick={placeOrder}
-              className="w-full bg-red-600 hover:bg-red-700 text-white font-extrabold text-sm py-3.5 rounded-xl transition-all shadow-xl hover:shadow-red-500/10 active:scale-[0.99] flex items-center justify-center gap-2"
+              disabled={isPlacingOrder || (cartSubtotal < minOrderAmount && minOrderAmount > 0)}
+              className={`w-full text-white font-extrabold text-sm py-3.5 rounded-xl transition-all shadow-xl flex items-center justify-center gap-2 ${
+                isPlacingOrder
+                  ? 'bg-orange-400 cursor-not-allowed opacity-90'
+                  : cartSubtotal < minOrderAmount && minOrderAmount > 0
+                    ? 'bg-slate-300 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed shadow-none border border-slate-200 dark:border-slate-700'
+                    : !user
+                      ? 'bg-amber-600 hover:bg-amber-700 active:scale-[0.99] cursor-pointer'
+                      : 'bg-[#fc490f] hover:bg-orange-600 active:scale-[0.99] cursor-pointer'
+              }`}
               id="btn-place-order"
             >
-              <span>CONFIRM & PLACE ORDER</span>
-              <ChevronRight className="w-4 h-4" />
+              {isPlacingOrder ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>PLACING ORDER...</span>
+                </>
+              ) : cartSubtotal < minOrderAmount && minOrderAmount > 0 ? (
+                <>
+                  <span>MINIMUM ORDER ₹{minOrderAmount} REQUIRED</span>
+                </>
+              ) : !user ? (
+                <>
+                  <span>LOGIN TO PLACE ORDER</span>
+                  <ChevronRight className="w-4 h-4" />
+                </>
+              ) : (
+                <>
+                  <span>CONFIRM & PLACE ORDER</span>
+                  <ChevronRight className="w-4 h-4" />
+                </>
+              )}
             </button>
 
             <span className="block text-center text-[10px] text-gray-400">

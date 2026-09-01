@@ -61,6 +61,50 @@
             </div>
         </div>
 
+        <!-- Order & Checkout Rules -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-4">
+            <h3 class="font-bold text-slate-800 dark:text-white text-base border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2">
+                <i class="fa-solid fa-cart-shopping text-emerald-500"></i> Order & Checkout Rules
+            </h3>
+            <p class="text-xs text-slate-400">Configure global basket restrictions and minimum checkout order value required from customers.</p>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">
+                        <i class="fa-solid fa-indian-rupee-sign text-emerald-500 mr-1"></i> Minimum Order Amount (₹)
+                    </label>
+                    <input type="number" name="min_order_amount" value="{{ $settings['min_order_amount'] ?? '199' }}" min="0" required placeholder="199" class="block w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-sm font-extrabold">
+                    <span class="text-[10px] text-slate-400 mt-1 block">Customer cannot checkout if cart total is below this amount</span>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">
+                        <i class="fa-solid fa-truck text-blue-500 mr-1"></i> Free Delivery Above (₹)
+                    </label>
+                    <input type="number" name="free_delivery_threshold" value="{{ $settings['free_delivery_threshold'] ?? '499' }}" min="0" placeholder="499" class="block w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm font-extrabold">
+                    <span class="text-[10px] text-slate-400 mt-1 block">Orders equal or above this get free express shipping</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delivery Time Slots Configuration -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-4">
+            <h3 class="font-bold text-slate-800 dark:text-white text-base border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2">
+                <i class="fa-solid fa-clock text-amber-500"></i> Delivery Time Slots Management
+            </h3>
+            <p class="text-xs text-slate-400">Manage global delivery time slot displays. Admin can select these slots when creating or editing products.</p>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">🌅 Morning Slot Display Text</label>
+                    <input type="text" name="morning_delivery_slot" value="{{ $settings['morning_delivery_slot'] ?? 'Today 07:00 am - 12:00 pm' }}" required placeholder="e.g. Today 07:00 am - 12:00 pm" class="block w-full px-4 py-2 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">🌆 Evening Slot Display Text</label>
+                    <input type="text" name="evening_delivery_slot" value="{{ $settings['evening_delivery_slot'] ?? 'Today 4:00pm - 08:30 pm' }}" required placeholder="e.g. Today 4:00pm - 08:30 pm" class="block w-full px-4 py-2 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm">
+                </div>
+            </div>
+        </div>
+
         <!-- SEO Management -->
         <div class="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-4">
             <h3 class="font-bold text-slate-800 dark:text-white text-base border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2">

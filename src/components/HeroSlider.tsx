@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Copy, Check } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { SkeletonHero } from './SkeletonLoader';
 
@@ -7,131 +7,164 @@ export const HeroSlider: React.FC = () => {
   const { slides, isLoadingSlides, activeHeroIndex, setActiveHeroIndex } = useApp();
   const currentIndex = activeHeroIndex;
   const setCurrentIndex = setActiveHeroIndex;
-  const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
-  const slideList = slides && slides.length > 0 ? slides : [];
+  // Touch swipe refs
+  const touchStartX = useRef<number>(0);
+  const touchEndX = useRef<number>(0);
+
+  const slideList = slides && slides.length > 0 ? slides : [
+    {
+      id: 'slide-default-1',
+      titleLine1: 'FRESH FISH',
+      titleLine2: 'HEALTHY LIFE',
+      subtitleLine1: '100% Fresh | Cleaned & Hygienic',
+      subtitleLine2: 'Home Delivery in 30 mins',
+      bgGradient: 'from-[#fc490f] via-[#fc490f] to-[#e03e07]',
+      image: 'https://images.unsplash.com/photo-1534604973900-c43ab4c2e0ab?auto=format&fit=crop&w=600&q=80'
+    },
+    {
+      id: 'slide-default-2',
+      titleLine1: 'PRAWNS FESTIVAL',
+      titleLine2: 'FLAT 20% OFF',
+      subtitleLine1: 'Juicy White Tiger Prawns & Shrimps',
+      subtitleLine2: 'Cleaned & Peeled ready for curry',
+      bgGradient: 'from-[#e03e07] via-[#fc490f] to-[#fc490f]',
+      image: 'https://images.unsplash.com/photo-1559737558-2f5a35f4523b?auto=format&fit=crop&w=600&q=80'
+    },
+    {
+      id: 'slide-default-3',
+      titleLine1: 'TENDER CHICKEN',
+      titleLine2: 'FARM FRESH',
+      subtitleLine1: 'Antibiotic Free | Hand Cut Portions',
+      subtitleLine2: 'Delivered Fresh in 30 Mins',
+      bgGradient: 'from-[#fc490f] via-orange-600 to-amber-600',
+      image: 'https://images.unsplash.com/photo-1604503468506-a8da13d82791?auto=format&fit=crop&w=600&q=80'
+    }
+  ];
 
   // Auto-play interval
   useEffect(() => {
     if (slideList.length <= 1) return;
     const timer = setInterval(() => {
       setCurrentIndex(prev => (prev + 1) % slideList.length);
-    }, 6000);
+    }, 4500);
     return () => clearInterval(timer);
-  }, [slideList.length]);
+  }, [slideList.length, setCurrentIndex]);
 
-  if (isLoadingSlides) {
-    return <SkeletonHero />;
-  }
-
-  if (slideList.length === 0) return null;
-
-  const handlePrev = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handlePrev = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     setCurrentIndex(prev => (prev - 1 + slideList.length) % slideList.length);
   };
 
-  const handleNext = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleNext = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     setCurrentIndex(prev => (prev + 1) % slideList.length);
   };
 
-  const handleCopy = (code: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(code);
-    setCopiedCode(code);
-    setTimeout(() => setCopiedCode(null), 2500);
+  // Touch events for mobile swiping
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.targetTouches[0].clientX;
   };
 
-  const currentSlide = slideList[currentIndex] || slideList[0];
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStartX.current - touchEndX.current > 50) {
+      // Swiped Left -> Next slide
+      handleNext();
+    }
+    if (touchStartX.current - touchEndX.current < -50) {
+      // Swiped Right -> Prev slide
+      handlePrev();
+    }
+  };
+
+  if (isLoadingSlides && slides.length === 0) {
+    return <SkeletonHero />;
+  }
 
   return (
-    <div className="relative w-full rounded-2xl overflow-hidden shadow-lg border border-gray-100/10 h-48 sm:h-56 md:h-64 lg:h-72 select-none group">
+    <div 
+      className="relative w-full rounded-none overflow-hidden shadow-none border-none h-44 sm:h-56 md:h-64 select-none group touch-pan-y"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       
-      {/* Background slide wrapper */}
-      <div className="absolute inset-0 w-full h-full flex transition-transform duration-700 ease-out">
-        <div 
-          className={`w-full h-full flex items-center justify-between p-4 sm:p-8 md:p-10 bg-gradient-to-r ${currentSlide.bgGradient}`}
-        >
-          {/* Text Container */}
-          <div className="flex-1 max-w-[60%] sm:max-w-[65%] text-white space-y-1.5 sm:space-y-3.5 animate-fadeIn">
-            <span className="inline-block bg-white/20 text-[9px] sm:text-xs font-bold uppercase tracking-widest px-2 py-0.5 rounded-full backdrop-blur-xs">
-              ⚡ Limited Period Offer
-            </span>
-            <h2 className="font-sans font-black text-sm sm:text-2xl md:text-3xl leading-tight tracking-tight">
-              {currentSlide.title}
-            </h2>
-            <p className="text-[10px] sm:text-sm text-white/95 line-clamp-2 leading-normal">
-              {currentSlide.subtitle}
-            </p>
-            
-            {/* Promo code copy button */}
-            <div className="flex items-center gap-2 pt-1">
-              <button
-                onClick={(e) => handleCopy(currentSlide.code, e)}
-                className="flex items-center gap-1.5 bg-white text-gray-900 text-[10px] sm:text-xs font-bold px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg shadow-md hover:bg-gray-100 transition-colors active:scale-95"
-                title="Copy promo code"
-                id={`btn-copy-${currentSlide.code}`}
-              >
-                {copiedCode === currentSlide.code ? (
-                  <>
-                    <Check className="w-3 h-3 text-emerald-600 font-bold" />
-                    <span className="text-emerald-600">Copied!</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3 h-3 text-gray-500" />
-                    <span>Use Code: <span className="font-mono text-red-600">{currentSlide.code}</span></span>
-                  </>
-                )}
-              </button>
+      {/* Sliding Track (Flex container sliding via translateX) */}
+      <div 
+        className="w-full h-full flex transition-transform duration-500 ease-out"
+        style={{ transform: `translateX(-${(currentIndex % slideList.length) * 100}%)` }}
+      >
+        {slideList.map((slide, idx) => (
+          <div 
+            key={slide.id || idx}
+            className={`w-full h-full shrink-0 flex items-center justify-between pl-4 sm:pl-7 pr-0 py-0 bg-gradient-to-r ${slide.bgGradient || 'from-[#fc490f] via-[#fc490f] to-[#e03e07]'}`}
+          >
+            {/* Text Content Block */}
+            <div className="flex-1 max-w-[55%] text-white space-y-1.5 sm:space-y-2.5 z-10 py-3 sm:py-5">
+              <h2 className="font-sans font-black text-xl sm:text-3xl md:text-4xl leading-tight tracking-tight uppercase">
+                <span className="block text-white">{slide.titleLine1 || slide.title || 'FRESH FISH'}</span>
+                <span className="block text-[#FFEB3B]">{slide.titleLine2 || 'HEALTHY LIFE'}</span>
+              </h2>
+              
+              <div className="text-[10px] sm:text-xs text-orange-50 leading-tight space-y-0.5">
+                <p className="font-semibold">{slide.subtitleLine1 || slide.subtitle || '100% Fresh | Cleaned & Hygienic'}</p>
+                <p>{slide.subtitleLine2 || 'Home Delivery in 30 mins'}</p>
+              </div>
+              
+              {/* White Rounded SHOP NOW Button */}
+              <div className="pt-1.5">
+                <button
+                  className="flex items-center gap-2 bg-white text-[#fc490f] hover:bg-orange-50 text-[11px] sm:text-xs font-black px-4 py-2 rounded-full shadow-md transition-all active:scale-95 uppercase cursor-pointer"
+                  id={`btn-shop-now-${slide.id}`}
+                >
+                  <span>SHOP NOW</span>
+                  <ArrowRight className="w-3.5 h-3.5 stroke-[3]" />
+                </button>
+              </div>
             </div>
-          </div>
 
-          {/* Image Container */}
-          <div className="w-[35%] sm:w-[30%] h-full relative flex items-center justify-center">
-            <div className="w-20 h-20 sm:w-36 sm:h-36 md:w-44 md:h-44 rounded-full overflow-hidden border-4 border-white/20 shadow-2xl relative shrink-0">
+            {/* Right Image Container - Flush top & bottom, left border-radius only */}
+            <div className="w-[45%] h-full relative flex items-center justify-end overflow-hidden">
               <img
-                src={currentSlide.image || 'https://images.unsplash.com/photo-1534604973900-c43ab4c2e0ab?auto=format&fit=crop&w=600&q=80'}
-                alt={currentSlide.title}
+                src={slide.image || 'https://images.unsplash.com/photo-1534604973900-c43ab4c2e0ab?auto=format&fit=crop&w=600&q=80'}
+                alt="Fresh Fish Platter"
                 referrerPolicy="no-referrer"
-                className="w-full h-full object-cover transform hover:scale-110 transition-transform duration-500"
+                className="w-full h-full object-cover object-center rounded-l-2xl sm:rounded-l-3xl transform group-hover:scale-105 transition-transform duration-500"
                 loading="eager"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1534604973900-c43ab4c2e0ab?auto=format&fit=crop&w=600&q=80';
-                }}
               />
             </div>
           </div>
-        </div>
+        ))}
       </div>
 
-      {/* Navigation Arrows (Visible on hover on desktop) */}
+      {/* Clickable Navigation Arrows */}
       <button
         onClick={handlePrev}
-        className="absolute left-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/30 hover:bg-black/50 text-white backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+        className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/30 hover:bg-black/60 text-white backdrop-blur-xs transition-all active:scale-90 z-10"
         aria-label="Previous slide"
-        id="btn-slider-prev"
       >
-        <ChevronLeft className="w-5 h-5" />
+        <ChevronLeft className="w-4 h-4 stroke-[3]" />
       </button>
       <button
         onClick={handleNext}
-        className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/30 hover:bg-black/50 text-white backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/30 hover:bg-black/60 text-white backdrop-blur-xs transition-all active:scale-90 z-10"
         aria-label="Next slide"
-        id="btn-slider-next"
       >
-        <ChevronRight className="w-5 h-5" />
+        <ChevronRight className="w-4 h-4 stroke-[3]" />
       </button>
 
-      {/* Navigation Dots */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
+      {/* Bottom Center White Pagination Dots */}
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-10">
         {slideList.map((_, idx) => (
           <button
             key={idx}
             onClick={() => setCurrentIndex(idx)}
-            className={`w-2 h-2 rounded-full transition-all ${
-              idx === currentIndex ? 'bg-white w-4' : 'bg-white/40 hover:bg-white/60'
+            className={`rounded-full transition-all ${
+              idx === (currentIndex % slideList.length) ? 'bg-white w-3.5 h-2.5 shadow-sm' : 'bg-white/50 w-2 h-2 hover:bg-white/80'
             }`}
             aria-label={`Go to slide ${idx + 1}`}
           />
@@ -141,3 +174,6 @@ export const HeroSlider: React.FC = () => {
     </div>
   );
 };
+
+
+

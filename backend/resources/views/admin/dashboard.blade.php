@@ -14,7 +14,9 @@
             <div class="space-y-1">
                 <span class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Sales</span>
                 <h3 class="text-2xl font-black text-slate-800 dark:text-white">₹{{ number_format($totalSales) }}</h3>
-                <p class="text-[10px] text-emerald-500 font-semibold"><i class="fa-solid fa-arrow-trend-up"></i> +12.4% vs last week</p>
+                <p class="text-[10px] {{ $salesGrowth >= 0 ? 'text-emerald-500' : 'text-red-500' }} font-semibold">
+                    <i class="fa-solid {{ $salesGrowth >= 0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down' }}"></i> {{ $salesGrowth >= 0 ? '+'.$salesGrowth.'%' : $salesGrowth.'%' }} vs last 7 days
+                </p>
             </div>
             <div class="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg">
                 <i class="fa-solid fa-wallet"></i>
@@ -26,7 +28,9 @@
             <div class="space-y-1">
                 <span class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Orders</span>
                 <h3 class="text-2xl font-black text-slate-800 dark:text-white">{{ $totalOrders }}</h3>
-                <p class="text-[10px] text-emerald-500 font-semibold"><i class="fa-solid fa-arrow-trend-up"></i> +8.2% vs last week</p>
+                <p class="text-[10px] {{ $ordersGrowth >= 0 ? 'text-emerald-500' : 'text-red-500' }} font-semibold">
+                    <i class="fa-solid {{ $ordersGrowth >= 0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down' }}"></i> {{ $ordersGrowth >= 0 ? '+'.$ordersGrowth.'%' : $ordersGrowth.'%' }} vs last 7 days
+                </p>
             </div>
             <div class="w-12 h-12 rounded-xl bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 flex items-center justify-center text-lg">
                 <i class="fa-solid fa-truck-ramp-box"></i>
@@ -38,28 +42,72 @@
             <div class="space-y-1">
                 <span class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Active Customers</span>
                 <h3 class="text-2xl font-black text-slate-800 dark:text-white">{{ $totalCustomers }}</h3>
-                <p class="text-[10px] text-emerald-500 font-semibold"><i class="fa-solid fa-arrow-trend-up"></i> +4.5% vs last week</p>
+                <p class="text-[10px] {{ $customersGrowth >= 0 ? 'text-emerald-500' : 'text-red-500' }} font-semibold">
+                    <i class="fa-solid {{ $customersGrowth >= 0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down' }}"></i> {{ $customersGrowth >= 0 ? '+'.$customersGrowth.'%' : $customersGrowth.'%' }} vs last 7 days
+                </p>
             </div>
             <div class="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg">
                 <i class="fa-solid fa-users"></i>
             </div>
         </div>
 
-        <!-- Active Menu items -->
+        <!-- Active Products Card -->
         <div class="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-2xl p-6 shadow-xs flex items-center justify-between">
             <div class="space-y-1">
-                <span class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Hot Deals</span>
-                <h3 class="text-2xl font-black text-slate-800 dark:text-white">Active</h3>
-                <p class="text-[10px] text-slate-500">Fast delivery operational</p>
+                <span class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Active Products</span>
+                <h3 class="text-2xl font-black text-slate-800 dark:text-white">{{ $totalActiveProducts }}</h3>
+                <p class="text-[10px] text-emerald-500 font-semibold"><i class="fa-solid fa-circle-check"></i> Live on store</p>
             </div>
-            <div class="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg animate-pulse">
-                <i class="fa-solid fa-fire"></i>
+            <div class="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg">
+                <i class="fa-solid fa-shrimp"></i>
             </div>
         </div>
 
     </div>
 
-    <!-- Chart & Low Stock Section -->
+    <!-- Stock & Inventory Operational Alert Bar -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <a href="{{ url('/admin/inventory?status=in_stock') }}" class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/60 dark:border-slate-800 flex items-center justify-between hover:border-emerald-500/40 transition-colors group">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-base">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                </div>
+                <div>
+                    <h4 class="text-sm font-extrabold text-slate-800 dark:text-white">{{ number_format($totalStockUnits ?? 0) }} Units</h4>
+                    <span class="text-[11px] text-slate-400">Total Live Stock Available</span>
+                </div>
+            </div>
+            <i class="fa-solid fa-chevron-right text-xs text-slate-300 group-hover:text-emerald-500 transition-colors"></i>
+        </a>
+
+        <a href="{{ url('/admin/inventory?status=low_stock') }}" class="bg-white dark:bg-slate-900 p-4 rounded-2xl border {{ ($lowStockProductsCount ?? 0) > 0 ? 'border-amber-400/60 dark:border-amber-500/40 bg-amber-50/20' : 'border-slate-200/60 dark:border-slate-800' }} flex items-center justify-between hover:border-amber-500 transition-colors group">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/30 text-amber-500 dark:text-amber-400 flex items-center justify-center text-base">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <div>
+                    <h4 class="text-sm font-extrabold text-amber-600 dark:text-amber-400">{{ $lowStockProductsCount ?? 0 }} Items</h4>
+                    <span class="text-[11px] text-slate-400">Low Stock Alert (< 5 units)</span>
+                </div>
+            </div>
+            <span class="text-xs font-bold text-amber-500 group-hover:underline">Manage <i class="fa-solid fa-arrow-right ml-1"></i></span>
+        </a>
+
+        <a href="{{ url('/admin/inventory?status=out_of_stock') }}" class="bg-white dark:bg-slate-900 p-4 rounded-2xl border {{ ($outOfStockProductsCount ?? 0) > 0 ? 'border-red-400/60 dark:border-red-500/40 bg-red-50/20' : 'border-slate-200/60 dark:border-slate-800' }} flex items-center justify-between hover:border-red-500 transition-colors group">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 flex items-center justify-center text-base">
+                    <i class="fa-solid fa-ban"></i>
+                </div>
+                <div>
+                    <h4 class="text-sm font-extrabold text-red-600 dark:text-red-400">{{ $outOfStockProductsCount ?? 0 }} Items</h4>
+                    <span class="text-[11px] text-slate-400">Out of Stock (Paused)</span>
+                </div>
+            </div>
+            <span class="text-xs font-bold text-red-500 group-hover:underline">Restock <i class="fa-solid fa-arrow-right ml-1"></i></span>
+        </a>
+    </div>
+
+    <!-- Chart & Popular Products Section -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         <!-- Weekly Sales Chart -->
@@ -73,15 +121,15 @@
             </div>
         </div>
 
-        <!-- Low Stock / Menu Items list -->
+        <!-- Popular Store Items list -->
         <div class="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-2xl p-6 shadow-xs lg:col-span-4 flex flex-col justify-between">
             <div>
                 <h3 class="font-bold text-slate-800 dark:text-white text-base mb-4">Popular Store Items</h3>
                 <div class="divide-y divide-slate-100 dark:divide-slate-800">
-                    @foreach($lowStockProducts as $p)
+                    @foreach($popularProducts as $p)
                     <div class="flex items-center justify-between py-3">
                         <div class="flex items-center gap-3">
-                            <img src="{{ $p->image }}" alt="{{ $p->name }}" class="w-10 h-10 rounded-lg object-cover bg-slate-100">
+                            <img src="{{ $p->image }}" alt="{{ $p->name }}" class="w-10 h-10 rounded-lg object-cover bg-slate-100" onerror="this.src='https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=100&q=80'">
                             <div>
                                 <h4 class="text-xs font-bold text-slate-800 dark:text-slate-200 line-clamp-1">{{ $p->name }}</h4>
                                 <p class="text-[10px] text-slate-400">{{ $p->weight }}</p>

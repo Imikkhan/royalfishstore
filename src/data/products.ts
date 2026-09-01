@@ -1,12 +1,33 @@
 import { Product } from '../types';
 
 export const CATEGORIES = [
-  { id: 'fish-seafood', name: 'Fish & Seafood', icon: '🐟', description: 'Fresh Catch' },
-  { id: 'chicken', name: 'Fresh Chicken', icon: '🍗', description: 'Tender Cuts' },
-  { id: 'mutton', name: 'Rich Mutton', icon: '🥩', description: 'Premium Goat' },
-  { id: 'marinades', name: 'Ready to Cook', icon: '🍢', description: 'Easy Marinades' },
-  { id: 'cold-cuts', name: 'Cold Cuts', icon: '🥓', description: 'Salamis & Sausages' },
-  { id: 'combos', name: 'Super Combos', icon: '🍱', description: 'Value Packs' },
+  // Main Categories
+  { id: 'wholesale-fish', slug: 'wholesale-fish', name: 'Wholesale Fish', icon: '📦', description: 'Bulk & Wholesale Fresh Fish', parent_id: null, image: 'https://images.unsplash.com/photo-1534604973900-c43ab4c2e0ab?auto=format&fit=crop&w=500&q=80' },
+  { id: 'fresh-fish', slug: 'fresh-fish', name: 'Fresh Fish', icon: '🐟', description: 'Daily Fresh Catch', parent_id: null, image: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=500&q=80' },
+  { id: 'fresh-hilsa', slug: 'fresh-hilsa', name: 'Fresh Hilsa', icon: '👑', description: 'Diamond Harbour Fresh Hilsa', parent_id: null, image: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=500&q=80' },
+  { id: 'seafood', slug: 'seafood', name: 'Seafood', icon: '🦀', description: 'Crabs, Lobsters & Marine Catch', parent_id: null, image: 'https://images.unsplash.com/photo-1559737558-2f5a35f4523b?auto=format&fit=crop&w=500&q=80' },
+  { id: 'chicken', slug: 'chicken', name: 'Chicken', icon: '🍗', description: 'Farm Fresh Tender Chicken', parent_id: null, image: 'https://images.unsplash.com/photo-1604503468506-a8da13d82791?auto=format&fit=crop&w=500&q=80' },
+  { id: 'mutton', slug: 'mutton', name: 'Mutton', icon: '🥩', description: 'Rich Pasture-Raised Goat Meat', parent_id: null, image: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=500&q=80' },
+
+  // Sub Categories for Fresh Fish
+  { id: 'rohu-catla', slug: 'rohu-catla', name: 'Rohu & Catla', icon: '🏞️', description: 'Freshwater Rohu & Catla cuts', parent_id: 'fresh-fish', parent_slug: 'fresh-fish', image: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=200&q=80' },
+  { id: 'live-fish', slug: 'live-fish', name: 'Live Fish', icon: '🌊', description: 'Live swimming fresh fish', parent_id: 'fresh-fish', parent_slug: 'fresh-fish', image: 'https://images.unsplash.com/photo-1534604973900-c43ab4c2e0ab?auto=format&fit=crop&w=200&q=80' },
+  { id: 'prawn-shell-fish', slug: 'prawn-shell-fish', name: 'Prawn & Shell Fish', icon: '🦐', description: 'Cleaned prawns & shellfish', parent_id: 'fresh-fish', parent_slug: 'fresh-fish', image: 'https://images.unsplash.com/photo-1559737558-2f5a35f4523b?auto=format&fit=crop&w=200&q=80' },
+  { id: 'fillet', slug: 'fillet', name: 'Fillet', icon: '🔪', description: 'Boneless fish fillets', parent_id: 'fresh-fish', parent_slug: 'fresh-fish', image: 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=200&q=80' },
+  { id: 'premium-fish', slug: 'premium-fish', name: 'Premium Fish', icon: '✨', description: 'Surmai, Pomfret & Salmon', parent_id: 'fresh-fish', parent_slug: 'fresh-fish', image: 'https://images.unsplash.com/photo-1599084993091-1cb5c0721cc6?auto=format&fit=crop&w=200&q=80' },
+  { id: 'other-fish', slug: 'other-fish', name: 'Other Fish', icon: '🐠', description: 'Assorted regional catch', parent_id: 'fresh-fish', parent_slug: 'fresh-fish', image: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=200&q=80' },
+
+  // Sub Categories for Chicken
+  { id: 'chicken-curry-cuts', slug: 'chicken-curry-cuts', name: 'Chicken Curry Cuts', icon: '🍗', description: 'Bone-in curry cuts', parent_id: 'chicken', parent_slug: 'chicken', image: 'https://images.unsplash.com/photo-1587593810167-a84920ea0781?auto=format&fit=crop&w=200&q=80' },
+  { id: 'chicken-boneless', slug: 'chicken-boneless', name: 'Chicken Boneless', icon: '🥩', description: 'Boneless breast & thigh fillets', parent_id: 'chicken', parent_slug: 'chicken', image: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?auto=format&fit=crop&w=200&q=80' },
+  { id: 'chicken-special-cuts', slug: 'chicken-special-cuts', name: 'Chicken Special Cuts', icon: '🍢', description: 'Drumsticks, wings & lollipop', parent_id: 'chicken', parent_slug: 'chicken', image: 'https://images.unsplash.com/photo-1604503468506-a8da13d82791?auto=format&fit=crop&w=200&q=80' },
+  { id: 'chicken-liver', slug: 'chicken-liver', name: 'Chicken Liver', icon: '🫀', description: 'Fresh chicken liver & gizzard', parent_id: 'chicken', parent_slug: 'chicken', image: 'https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?auto=format&fit=crop&w=200&q=80' },
+
+  // Sub Categories for Mutton
+  { id: 'mutton-curry-cuts', slug: 'mutton-curry-cuts', name: 'Mutton Curry Cuts', icon: '🍖', description: 'Standard goat curry cuts', parent_id: 'mutton', parent_slug: 'mutton', image: 'https://images.unsplash.com/photo-1603048588665-791ca8aea617?auto=format&fit=crop&w=200&q=80' },
+  { id: 'mutton-boneless', slug: 'mutton-boneless', name: 'Mutton Boneless', icon: '🥩', description: 'Boneless mutton & keema', parent_id: 'mutton', parent_slug: 'mutton', image: 'https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?auto=format&fit=crop&w=200&q=80' },
+  { id: 'mutton-special-cuts', slug: 'mutton-special-cuts', name: 'Mutton Special Cuts', icon: '🍢', description: 'Goat nalli, chops & ribs', parent_id: 'mutton', parent_slug: 'mutton', image: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=200&q=80' },
+  { id: 'mutton-liver', slug: 'mutton-liver', name: 'Mutton Liver', icon: '🫀', description: 'Fresh goat liver (Kaleji)', parent_id: 'mutton', parent_slug: 'mutton', image: 'https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?auto=format&fit=crop&w=200&q=80' },
 ] as const;
 
 export const PROMO_SLIDES = [
@@ -44,9 +65,9 @@ export const PRODUCTS: Product[] = [
   {
     id: 'fs-hilsa',
     name: 'Hilsa Fresh Diamond Harbour 1 Pc)* (.980kg-1kg)',
-    category: 'fish-seafood',
+    category: 'fresh-fish',
     subCategory: 'Seawater Fish',
-    image: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=500&q=80',
+    image: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=600&q=80',
     price: 249,
     originalPrice: 265,
     weight: '1 Pc (.980kg-1kg)',
@@ -55,7 +76,8 @@ export const PRODUCTS: Product[] = [
     grossWeight: '980gms -1Kg',
     netWeight: '900-950gms',
     piecesAfterCutting: '10-11 pieces after cutting.',
-    deliveryTime: 'Today 4:00pm - 08:30 pm',
+    deliveryTime: 'Today 4:30pm - 08:30 pm',
+    shortDescription: 'Gross : 980gms - 1.2kg | Net weight 900g - 1kg\n10-11 pieces after cutting.',
     description: 'Sought-after delicious freshwater/seawater Hilsa sourced directly from Diamond Harbour. Perfectly processed and sliced for curry or frying.',
     tags: ['Royal Catch', 'Special Price'],
     isBestSeller: true,
@@ -65,7 +87,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 'fs-1',
     name: 'Surmai / Seer King Fish Steaks',
-    category: 'fish-seafood',
+    category: 'fresh-fish',
     subCategory: 'Seawater Fish',
     image: 'https://images.unsplash.com/photo-1534604973900-c43ab4c2e0ab?auto=format&fit=crop&w=500&q=80',
     price: 649,
@@ -73,6 +95,8 @@ export const PRODUCTS: Product[] = [
     weight: '500g',
     pieces: '5-7 Steaks',
     servings: 'Serves 2-3',
+    shortDescription: 'Gross : 550g | Net weight 500g\n5-7 steaks after cutting.',
+    deliveryTime: 'Today 4:30pm - 08:30 pm',
     description: 'Also known as King Fish or Surmai, these meaty steaks are freshly sliced, scales removed, and perfectly ready to be shallow fried or cooked in a tangy coastal gravy. Highly rich in Omega-3 fatty acids and protein.',
     tags: ['Best Seller', 'Fresh Catch', 'High Omega 3'],
     isBestSeller: true,
@@ -82,7 +106,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 'fs-2',
     name: 'White Tiger Prawns - Cleaned & De-veined',
-    category: 'fish-seafood',
+    category: 'fresh-fish',
     subCategory: 'Prawns',
     image: 'https://images.unsplash.com/photo-1559737558-2f5a35f4523b?auto=format&fit=crop&w=500&q=80',
     price: 399,
@@ -100,7 +124,7 @@ export const PRODUCTS: Product[] = [
   {
     id: 'fs-3',
     name: 'Premium Salmon Fillet (Skin On)',
-    category: 'fish-seafood',
+    category: 'fresh-fish',
     subCategory: 'Exotic Catch',
     image: 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=500&q=80',
     price: 1199,
@@ -116,9 +140,9 @@ export const PRODUCTS: Product[] = [
   {
     id: 'fs-4',
     name: 'Freshwater Rohu - Bengali Cut (No Head)',
-    category: 'fish-seafood',
+    category: 'fresh-fish',
     subCategory: 'Freshwater Fish',
-    image: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=500&q=80',
+    image: 'https://images.unsplash.com/photo-1510130387422-82ebd3301c0e?auto=format&fit=crop&w=600&q=80',
     price: 249,
     originalPrice: 299,
     weight: '500g',
@@ -136,7 +160,7 @@ export const PRODUCTS: Product[] = [
     name: 'Tender Chicken Curry Cut (Small)',
     category: 'chicken',
     subCategory: 'Curry Cuts',
-    image: 'https://images.unsplash.com/photo-1604503468506-a8da13d82791?auto=format&fit=crop&w=500&q=80',
+    image: 'https://images.unsplash.com/photo-1587593810167-a84920ea0781?auto=format&fit=crop&w=600&q=80',
     price: 169,
     originalPrice: 199,
     weight: '500g',
@@ -172,7 +196,7 @@ export const PRODUCTS: Product[] = [
     name: 'Rich Goat Curry Cut (Mix)',
     category: 'mutton',
     subCategory: 'Curry Cuts',
-    image: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=500&q=80',
+    image: 'https://images.unsplash.com/photo-1603048588665-791ca8aea617?auto=format&fit=crop&w=600&q=80',
     price: 679,
     originalPrice: 799,
     weight: '500g',
@@ -260,7 +284,7 @@ export const PRODUCTS: Product[] = [
     name: 'Super Fish Fry & Curry Combo',
     category: 'combos',
     subCategory: 'Combo Packs',
-    image: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=500&q=80',
+    image: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80',
     price: 799,
     originalPrice: 999,
     weight: '1kg Combo',
@@ -275,11 +299,11 @@ export const PRODUCTS: Product[] = [
 ];
 
 export const SUBCATEGORIES: Record<string, string[]> = {
-  'fish-seafood': ['All', 'Seawater Fish', 'Freshwater Fish', 'Prawns', 'Exotic Catch'],
-  'chicken': ['All', 'Curry Cuts', 'Boneless & Mince'],
-  'mutton': ['All', 'Curry Cuts', 'Keema & Minced'],
-  'marinades': ['All', 'Chicken Marinades', 'Fish Marinades'],
-  'cold-cuts': ['All', 'Salami & Sausages'],
-  'combos': ['All', 'Combo Packs']
+  'fresh-fish': ['All', 'Rohu & Catla', 'Live Fish', 'Prawn & Shell Fish', 'Fillet', 'Premium Fish', 'Other Fish'],
+  'chicken': ['All', 'Chicken Curry Cuts', 'Chicken Boneless', 'Chicken Special Cuts', 'Chicken Liver'],
+  'mutton': ['All', 'Mutton Curry Cuts', 'Mutton Boneless', 'Mutton Special Cuts', 'Mutton Liver'],
+  'wholesale-fish': ['All'],
+  'fresh-hilsa': ['All'],
+  'seafood': ['All']
 };
 

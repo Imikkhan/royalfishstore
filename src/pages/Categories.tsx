@@ -32,6 +32,10 @@ export const Categories: React.FC = () => {
   };
 
   const filteredCategories = categories.filter(cat => {
+    // Only display top-level/main categories as cards (subcategories are shown as chips inside)
+    const isMain = !cat.parent_id || cat.parent_id === null || cat.parent_id === 0 || cat.parent_id === '0';
+    if (!isMain) return false;
+
     const name = cat.name || '';
     const desc = cat.description || '';
     const query = filterQuery.toLowerCase();

@@ -7,17 +7,6 @@ interface PincodeModalProps {
   onClose: () => void;
 }
 
-const MAJOR_CITIES = [
-  { city: 'Mumbai', pincode: '400001' },
-  { city: 'Delhi NCR', pincode: '110001' },
-  { city: 'Bengaluru', pincode: '560001' },
-  { city: 'Hyderabad', pincode: '500001' },
-  { city: 'Kolkata', pincode: '700001' },
-  { city: 'Chennai', pincode: '600001' },
-  { city: 'Pune', pincode: '411001' },
-  { city: 'Kochi', pincode: '682001' },
-];
-
 export const PincodeModal: React.FC<PincodeModalProps> = ({ isOpen, onClose }) => {
   const { activePincode, setPincode } = useApp();
   const [inputPin, setInputPin] = useState(activePincode || '');
@@ -107,33 +96,7 @@ export const PincodeModal: React.FC<PincodeModalProps> = ({ isOpen, onClose }) =
             )}
           </div>
 
-          {/* Major Cities Quick Select */}
-          <div className="space-y-3 pt-2">
-            <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">
-              Or Choose Major Serviced City:
-            </span>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {MAJOR_CITIES.map((item) => (
-                <button
-                  key={item.city}
-                  onClick={() => {
-                    setInputPin(item.pincode);
-                    handleSubmit(item.pincode);
-                  }}
-                  className={`p-2.5 rounded-xl border text-center text-xs font-bold transition-all ${
-                    activePincode === item.pincode
-                      ? 'bg-red-50 dark:bg-red-950/40 border-red-500 text-red-600 dark:text-red-400 ring-2 ring-red-100 dark:ring-red-900/30'
-                      : 'bg-gray-50 dark:bg-slate-800 border-gray-150 dark:border-slate-700 text-gray-700 dark:text-gray-300 hover:border-red-300'
-                  }`}
-                >
-                  <span className="block truncate">{item.city}</span>
-                  <span className="text-[10px] text-gray-400 dark:text-gray-500 font-mono block mt-0.5">
-                    {item.pincode}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
+
 
           {/* Guarantee Footer */}
           <div className="pt-3 border-t border-gray-100 dark:border-slate-800/80 flex items-center justify-between text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">

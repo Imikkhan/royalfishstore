@@ -1,0 +1,25 @@
+{
+  "name": "Royal Express Rider",
+  "short_name": "RoyalRider",
+  "description": "Delivery Partner Console for Royal Fish Store",
+  "start_url": "/rider/login",
+  "scope": "/rider/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#FF5722",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/images/rider-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/rider-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

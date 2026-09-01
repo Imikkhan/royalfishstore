@@ -35,4 +35,21 @@ return [
         ],
     ],
 
+    'whatsapp' => [
+        'api_url' => env('WHATSAPP_API_URL', 'https://graph.facebook.com/v22.0'),
+        'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID', '1261359957063709'),
+        'waba_id' => env('WHATSAPP_BUSINESS_ACCOUNT_ID', '981039441675980'),
+        'access_token' => env('WHATSAPP_ACCESS_TOKEN'),
+        'template_name' => env('WHATSAPP_OTP_TEMPLATE', 'otpsms_verification'),
+        'template_lang' => env('WHATSAPP_TEMPLATE_LANG', 'en_US'),
+    ],
+
+    'codebey' => [
+        'api_url' => env('CODEBEY_API_URL', 'https://codebey.online/external-api'),
+        'client_id' => env('CODEBEY_CLIENT_ID', 'ci_1JPP85AUFD1NVM7NNDSQ'),
+        'client_secret' => env('CODEBEY_CLIENT_SECRET', 'cs_6FPDTOC7VYMDNGMR2T5Q'),
+        'template_id' => env('CODEBEY_TEMPLATE_ID', '2846735265701532'),
+        'template_name' => env('CODEBEY_TEMPLATE_NAME', 'otpsms_verification'),
+    ],
+
 ];
