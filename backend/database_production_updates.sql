@@ -8,6 +8,17 @@ ALTER TABLE `products` ADD COLUMN IF NOT EXISTS `short_description` TEXT NULL AF
 ALTER TABLE `products` ADD COLUMN IF NOT EXISTS `delivery_time` VARCHAR(255) NULL AFTER `short_description`;
 ALTER TABLE `products` ADD COLUMN IF NOT EXISTS `serviced_pincodes` LONGTEXT NULL AFTER `delivery_time`;
 
+-- 1b. Update `categories` table (Add sort_order for custom display ordering)
+ALTER TABLE `categories` ADD COLUMN IF NOT EXISTS `sort_order` INT(11) NOT NULL DEFAULT 0 AFTER `description`;
+
+-- Initialize default order sequence (Main categories: 1..6, Sub categories for Shop by Category: 1..12)
+UPDATE `categories` SET `sort_order` = CASE `id`
+    WHEN 1 THEN 1 WHEN 2 THEN 2 WHEN 3 THEN 3 WHEN 4 THEN 4 WHEN 5 THEN 5 WHEN 6 THEN 6
+    WHEN 7 THEN 1 WHEN 8 THEN 2 WHEN 9 THEN 3 WHEN 10 THEN 4 WHEN 11 THEN 5 WHEN 12 THEN 6
+    WHEN 13 THEN 7 WHEN 14 THEN 8 WHEN 15 THEN 9 WHEN 16 THEN 10 WHEN 17 THEN 11 WHEN 18 THEN 12
+    ELSE `id`
+END;
+
 -- 2. Update `orders` table (Modify ID column to VARCHAR and add logistics columns)
 ALTER TABLE `orders` MODIFY `id` VARCHAR(255) NOT NULL;
 ALTER TABLE `orders` ADD COLUMN IF NOT EXISTS `rider_id` BIGINT(20) UNSIGNED NULL AFTER `user_id`;

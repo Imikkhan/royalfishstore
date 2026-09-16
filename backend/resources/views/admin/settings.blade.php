@@ -156,6 +156,56 @@
             </div>
         </div>
 
+        <!-- WhatsApp Notifications Configuration -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-4">
+            <h3 class="font-bold text-slate-800 dark:text-white text-base border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i class="fa-brands fa-whatsapp text-emerald-500 text-lg"></i>
+                    <span>WhatsApp Order & Logistics Notifications</span>
+                </div>
+                <span class="text-[10px] bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400 font-extrabold px-2.5 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
+                    Codebey & Meta Active
+                </span>
+            </h3>
+            <p class="text-xs text-slate-400">Automated WhatsApp alerts sent to Admin, Customers, and Delivery Boys (Riders).</p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">
+                        <i class="fa-solid fa-phone text-emerald-500 mr-1"></i> Admin WhatsApp Phone Number
+                    </label>
+                    <input type="text" name="admin_whatsapp_phone" value="{{ $settings['admin_whatsapp_phone'] ?? ($settings['website_phone'] ?? '') }}" placeholder="e.g. 9198308XXXXX" class="block w-full px-4 py-2 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-sm font-bold font-mono">
+                    <span class="text-[10px] text-slate-400 mt-1 block">New order alerts will be instantly sent to this WhatsApp number</span>
+                </div>
+
+                <div class="space-y-2.5 pt-1 sm:pt-4">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="hidden" name="notify_admin_whatsapp" value="0">
+                        <input type="checkbox" name="notify_admin_whatsapp" value="1" {{ (!isset($settings['notify_admin_whatsapp']) || $settings['notify_admin_whatsapp'] == '1') ? 'checked' : '' }} class="w-4 h-4 text-emerald-600 rounded">
+                        <span class="text-xs font-bold text-slate-700 dark:text-slate-300">🚨 Alert Admin on New Orders</span>
+                    </label>
+
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="hidden" name="notify_customer_order_placed" value="0">
+                        <input type="checkbox" name="notify_customer_order_placed" value="1" {{ (!isset($settings['notify_customer_order_placed']) || $settings['notify_customer_order_placed'] == '1') ? 'checked' : '' }} class="w-4 h-4 text-emerald-600 rounded">
+                        <span class="text-xs font-bold text-slate-700 dark:text-slate-300">🎉 Send Order Confirmation to Customer</span>
+                    </label>
+
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="hidden" name="notify_customer_status_change" value="0">
+                        <input type="checkbox" name="notify_customer_status_change" value="1" {{ (!isset($settings['notify_customer_status_change']) || $settings['notify_customer_status_change'] == '1') ? 'checked' : '' }} class="w-4 h-4 text-emerald-600 rounded">
+                        <span class="text-xs font-bold text-slate-700 dark:text-slate-300">📦 Notify Customer on Status Change</span>
+                    </label>
+
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="hidden" name="notify_rider_assignment" value="0">
+                        <input type="checkbox" name="notify_rider_assignment" value="1" {{ (!isset($settings['notify_rider_assignment']) || $settings['notify_rider_assignment'] == '1') ? 'checked' : '' }} class="w-4 h-4 text-emerald-600 rounded">
+                        <span class="text-xs font-bold text-slate-700 dark:text-slate-300">🛵 Notify Delivery Boy on Order Assignment</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
         <!-- Social Media Connections -->
         <div class="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800 rounded-2xl p-6 shadow-xs space-y-4">
             <h3 class="font-bold text-slate-800 dark:text-white text-base border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2">

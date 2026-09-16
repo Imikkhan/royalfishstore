@@ -62,6 +62,60 @@ Route::get('/test-whatsapp-live', function (\Illuminate\Http\Request $request, \
     ], 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 });
 
+// Diagnostic WhatsApp Order Confirmation Test Route
+Route::get('/test-whatsapp-order', function (\Illuminate\Http\Request $request, \App\Services\WhatsAppService $service) {
+    $phone = $request->query('phone', '9875411657');
+    $name = $request->query('name', 'Valued Customer');
+    $orderId = 'ROYAL-' . mt_rand(100000, 999999);
+    $items = '1x Fresh Hilsa / Ilish, 1x Tiger Prawns';
+    $total = '₹1,250.00';
+    $payment = 'COD';
+    $address = 'Flat 402, Royal Residency, Marine Drive, Kolkata 700001';
+
+    $templateParams = [$name, $orderId, $items, $total, $payment, $address];
+    $result = $service->sendMessage(
+        $phone,
+        "Order #{$orderId} placed successfully!",
+        'order_confirmation',
+        $templateParams,
+        '1904807637591601'
+    );
+
+    return response()->json([
+        'test_type' => 'Order Confirmation WhatsApp Notification',
+        'target_phone' => $phone,
+        'order_id' => $orderId,
+        'result' => $result
+    ], 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+});
+
+// Diagnostic WhatsApp Order Status Update Test Route
+Route::get('/test-whatsapp-status', function (\Illuminate\Http\Request $request, \App\Services\WhatsAppService $service) {
+    $phone = $request->query('phone', '9875411657');
+    $name = $request->query('name', 'Valued Customer');
+    $orderId = 'ROYAL-' . mt_rand(100000, 999999);
+    $status = $request->query('status', 'Out for Delivery');
+    $slot = '30-45 mins';
+    $address = 'Flat 402, Royal Residency, Marine Drive, Kolkata 700001';
+
+    $templateParams = [$name, $orderId, $status, $slot, $address];
+    $result = $service->sendMessage(
+        $phone,
+        "Order #{$orderId} status updated to {$status}!",
+        'order_status_update',
+        $templateParams,
+        '28074372922185765'
+    );
+
+    return response()->json([
+        'test_type' => 'Order Status Update WhatsApp Notification',
+        'target_phone' => $phone,
+        'order_id' => $orderId,
+        'new_status' => $status,
+        'result' => $result
+    ], 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+});
+
 Route::get('/orders/{orderId}/chat', [ApiController::class, 'getChatMessages']);
 Route::post('/orders/{orderId}/chat', [ApiController::class, 'sendChatMessage']);
 

@@ -68,7 +68,7 @@ const AppContent: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
           
           {/* Brand Introduction Section */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start border-b border-gray-50 dark:border-slate-800/60 pb-8">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
             <div className="md:col-span-4 space-y-3 text-center md:text-left">
               <div className="flex items-center justify-center md:justify-start">
                 <img src="/logo.png" alt="Royal Fish Store Logo" className="h-12 w-auto object-contain" />
@@ -115,30 +115,12 @@ const AppContent: React.FC = () => {
           </div>
 
           {/* Bottom security certificate bar */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-gray-50 dark:border-slate-800/40 text-[11px] text-gray-400">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-6 border-t border-gray-50 dark:border-slate-800/40 text-[11px] text-gray-400">
             <div className="flex items-center gap-1">
               <span>Made with premium quality standards for</span>
               <a href="https://royalfishstore.com" target="_blank" rel="noopener noreferrer" className="text-red-600 font-bold hover:underline">
                 royalfishstore.com
               </a>
-            </div>
-
-            {/* Payment security icons layout */}
-            <div className="flex items-center gap-3">
-              <span className="font-mono text-[9px] uppercase tracking-widest text-gray-400 dark:text-gray-500">
-                100% Secure Checkout:
-              </span>
-              <div className="flex gap-2">
-                <span className="bg-gray-50 dark:bg-slate-800 text-[10px] font-bold px-2 py-0.5 rounded border border-gray-100 dark:border-slate-700">
-                  VISA Secure
-                </span>
-                <span className="bg-gray-50 dark:bg-slate-800 text-[10px] font-bold px-2 py-0.5 rounded border border-gray-100 dark:border-slate-700">
-                  MasterCard ID Check
-                </span>
-                <span className="bg-gray-50 dark:bg-slate-800 text-[10px] font-bold px-2 py-0.5 rounded border border-gray-100 dark:border-slate-700">
-                  RuPay JCB
-                </span>
-              </div>
             </div>
           </div>
 

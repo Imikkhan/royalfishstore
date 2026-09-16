@@ -145,8 +145,6 @@ class RiderController extends Controller
             'success' => true,
             'message' => $isSuccess ? "OTP sent to WhatsApp (+91 {$phone})" : ($waResult['message'] ?? "OTP delivery pending."),
             'whatsapp_status' => $isSuccess ? 'sent' : 'failed',
-            'debug_otp' => (config('app.debug') || app()->environment('local')) ? $otp : null,
-            'ip_to_whitelist' => !$isSuccess ? ($waResult['ip_to_whitelist'] ?? null) : null,
         ]);
     }
 
@@ -391,6 +389,7 @@ class RiderController extends Controller
         $order->save();
 
         \App\Services\OrderMailService::sendCustomerStatusMail($order, $order->shipment_status ?: $order->status);
+        \App\Services\OrderWhatsAppService::sendCustomerOrderStatusNotification($order, $order->shipment_status ?: $order->status);
 
         return response()->json([
             'success' => true,

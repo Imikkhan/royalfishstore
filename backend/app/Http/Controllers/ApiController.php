@@ -117,6 +117,8 @@ class ApiController extends Controller
 
             // Format products identical to standard product cards
             $formattedProducts = [];
+            $promoHeadings = $sec['promo_headings'] ?? [];
+
             foreach ($productsList as $p) {
                 $sellingPrice = (float)$p->price;
                 $originalPrice = (float)$p->original_price;
@@ -124,8 +126,11 @@ class ApiController extends Controller
                     $originalPrice = ceil($sellingPrice * 1.20);
                 }
 
+                $promoHeading = $promoHeadings[$p->id] ?? ($promoHeadings[(string)$p->id] ?? null);
+
                 $formattedProducts[] = [
                     'id' => $p->product_code ?: (string)$p->id,
+                    'rawId' => $p->id,
                     'name' => $p->name,
                     'slug' => $p->slug,
                     'category' => $p->category ? $p->category->slug : ($cat ? $cat->slug : 'fish'),
@@ -145,6 +150,7 @@ class ApiController extends Controller
                     'isBestSeller' => (bool)$p->is_best_seller,
                     'stockQuantity' => (int)($p->stock_quantity ?? 50),
                     'inStock' => $p->in_stock !== null ? (bool)$p->in_stock : true,
+                    'promoHeading' => $promoHeading
                 ];
             }
 
@@ -153,6 +159,7 @@ class ApiController extends Controller
                 'badge' => $sec['badge'] ?? '🔥 আজকের স্পেশাল অফার',
                 'title' => $sec['title'] ?? ($cat ? $cat->name : 'স্পেশাল কালেকশন'),
                 'subtitle' => $sec['subtitle'] ?? '',
+                'layout_type' => (isset($sec['layout_type']) && in_array($sec['layout_type'], ['grid', 'single_showcase'])) ? $sec['layout_type'] : 'grid',
                 'category_id' => $catId,
                 'category_name' => $cat ? $cat->name : '',
                 'category_slug' => $cat ? $cat->slug : '',
@@ -164,9 +171,91 @@ class ApiController extends Controller
             ];
         }
 
+        // Hero Section
+        $heroSetting = Setting::where('key', 'onepager_hero')->first();
+        $hero = $heroSetting && !empty($heroSetting->value) ? json_decode($heroSetting->value, true) : [
+            'badge' => '🔥 আজকের স্পেশাল ইলিশ অফার',
+            'title' => 'কলকাতায় এবার ঘরে বসেই উপভোগ করুন তেলতেলে রাজকীয় ইলিশ',
+            'subtitle' => '১ কেজি+ সাইজের স্পেশাল ইলিশ—কাটিং, পরিষ্কার ও হাইজেনিক প্যাকেজিংসহ পৌঁছে যাবে আপনার রান্নাঘরে।',
+            'price_box_1_title' => '১ কেজি+ সম্পূর্ণ ইলিশ',
+            'price_box_1_price' => '₹1,399',
+            'price_box_1_unit' => '/কেজি',
+            'price_box_2_title' => '৭০-৮০ গ্রাম কাটা পিস',
+            'price_box_2_price' => '₹149',
+            'price_box_2_unit' => '/পিস',
+            'btn_order_text' => '🐟 এখনই অর্ডার করুন',
+            'btn_whatsapp_text' => 'WhatsApp-এ কথা বলুন',
+            'whatsapp_number' => '919876543210',
+            'whatsapp_msg' => 'Hi Royal Fish Store, আমি আজকের স্পেশাল পদ্মার ইলিশ অর্ডার করতে চাই।',
+            'hero_image' => '/hilsa_hero.png',
+            'delivery_badge' => '২৪ ঘণ্টার মধ্যে আপনার দরজায় Delivery',
+            'fresh_badge' => '100% FRESH'
+        ];
+
+        // Customer Reviews Section
+        $reviewsSetting = Setting::where('key', 'onepager_reviews')->first();
+        $reviews = $reviewsSetting && !empty($reviewsSetting->value) ? json_decode($reviewsSetting->value, true) : [
+            'title' => 'What Real Seafood Lovers Say',
+            'subtitle' => 'Facebook par ad dekh kar order karne wale customer ke asli reviews',
+            'items' => [
+                [
+                    'name' => 'Sunita Roy',
+                    'city' => 'Kolkata • Verified Buyer',
+                    'rating' => 5,
+                    'text' => 'Diamond Harbour Hilsa order kiya tha Facebook ad dekh ke. Fish ekdum fresh thi, koi smell nahi aur tel bohot accha nikla curry me! Ab har weekend yahin se lenge.',
+                    'image' => 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&q=80',
+                    'ordered_item' => 'Ordered: Fresh Hilsa 1kg Cut'
+                ],
+                [
+                    'name' => 'Vikramaditya Rao',
+                    'city' => 'Mumbai • Verified Buyer',
+                    'rating' => 5,
+                    'text' => 'Surmai steaks and Jumbo tiger prawns were delivered in just 35 minutes! Cleaned so well that I just had to marinate and fry. 10/10 packing.',
+                    'image' => 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=120&q=80',
+                    'ordered_item' => 'Ordered: Surmai Steaks & Tiger Prawns'
+                ],
+                [
+                    'name' => 'Anand Verma',
+                    'city' => 'Delhi NCR • Verified Buyer',
+                    'rating' => 5,
+                    'text' => 'Mutton curry cut and country chicken both were super tender. Cash on delivery option made it very reliable to test for the first time.',
+                    'image' => 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80',
+                    'ordered_item' => 'Ordered: Goat Curry Cut & Farm Chicken'
+                ]
+            ]
+        ];
+
+        // FAQs Section
+        $faqsSetting = Setting::where('key', 'onepager_faqs')->first();
+        $faqs = $faqsSetting && !empty($faqsSetting->value) ? json_decode($faqsSetting->value, true) : [
+            'title' => 'সাধারণ কিছু প্রশ্নের উত্তর',
+            'subtitle' => 'প্রয়োজনীয় তথ্য',
+            'items' => [
+                [
+                    'q' => 'কোন কোন PIN code-এ Delivery হবে?',
+                    'a' => "Newtown: 700156, 700157, 700136, 700135, 700160, 700161, 700162, 700163, 700132, 700152, 700059, 700101\nSalt Lake: 700091, 700106, 700107, 700102, 700064, 700010, 700046, 700101, 700100, 700105"
+                ],
+                [
+                    'q' => 'কাটা ইলিশে Delivery Charge কত?',
+                    'a' => '3 পিস অর্ডারে ₹100 delivery charge যোগ হবে। 4 পিস বা তার বেশি অর্ডার করলে delivery সম্পূর্ণ FREE।'
+                ],
+                [
+                    'q' => 'কত সময়ের মধ্যে Delivery হবে?',
+                    'a' => 'অর্ডার Confirm হওয়ার পর সাধারণত 24 ঘণ্টার মধ্যে Delivery করা হবে।'
+                ],
+                [
+                    'q' => 'Cash on Delivery আছে?',
+                    'a' => 'হ্যাঁ, মাছ হাতে পাওয়ার সময় Cash on Delivery-তে মূল্য দিতে পারবেন।'
+                ]
+            ]
+        ];
+
         return response()->json([
             'success' => true,
-            'sections' => $hydratedSections
+            'hero' => $hero,
+            'sections' => $hydratedSections,
+            'reviews' => $reviews,
+            'faqs' => $faqs
         ], 200, ['Content-Type' => 'application/json; charset=utf-8'], JSON_UNESCAPED_UNICODE);
     }
 
@@ -195,7 +284,7 @@ class ApiController extends Controller
      */
     public function getCategories()
     {
-        $categories = Category::where('is_active', true)->get();
+        $categories = Category::where('is_active', true)->orderBy('sort_order', 'asc')->orderBy('id', 'asc')->get();
         return response()->json($categories);
     }
 
@@ -479,8 +568,6 @@ class ApiController extends Controller
             'phone' => $phoneClean,
             'whatsapp_status' => $statusStr,
             'whatsapp_error' => !$isSuccess ? ($waResult['last_error'] ?? null) : null,
-            'ip_to_whitelist' => !$isSuccess ? ($waResult['ip_to_whitelist'] ?? null) : null,
-            'debug_otp' => (config('app.debug') || app()->environment('local')) ? $otp : null,
         ]);
     }
 
@@ -724,9 +811,19 @@ class ApiController extends Controller
         $orders = $request->user()->orders()->with('items')->latest()->get();
 
         $mapped = $orders->map(function ($o) {
-            $effectiveStatus = $o->shipment_status ?: $o->status;
-            if ($effectiveStatus === 'Pending Assignment') {
-                $effectiveStatus = 'Placed';
+            // Cancelled orders are always Cancelled
+            if ($o->status === 'Cancelled' || $o->shipment_status === 'Cancelled') {
+                $effectiveStatus = 'Cancelled';
+            } elseif ($o->status === 'Delivered' || $o->shipment_status === 'Delivered') {
+                $effectiveStatus = 'Delivered';
+            } elseif ($o->shipment_status === 'Out for Delivery' || $o->status === 'Out for Delivery') {
+                $effectiveStatus = 'Out for Delivery';
+            } elseif ($o->status === 'Dispatched' || $o->shipment_status === 'Dispatched') {
+                $effectiveStatus = 'Dispatched';
+            } elseif ($o->status === 'Processing' || $o->shipment_status === 'Processing') {
+                $effectiveStatus = 'Processing';
+            } else {
+                $effectiveStatus = $o->status ?: 'Placed';
             }
 
             return [
@@ -864,15 +961,27 @@ class ApiController extends Controller
         $orderItemsData = [];
         $responseItems = [];
 
-        $order = \Illuminate\Support\Facades\DB::transaction(function() use ($orderId, $user, $request, $productsByCode, $now, &$orderItemsData, &$responseItems) {
+        // Ensure delivery address reflects customer's real registered phone number
+        $addressData = $request->address;
+        if (is_array($addressData)) {
+            $addrPhone = (string)($addressData['phone'] ?? '');
+            if (empty($addrPhone) || strpos($addrPhone, '98765 43210') !== false || strpos($addrPhone, '9876543210') !== false) {
+                $addressData['phone'] = $user->phone ?: $addrPhone;
+            }
+            if (empty($addressData['name']) || $addressData['name'] === 'Home (Default)') {
+                $addressData['name'] = $user->name ?: 'Customer';
+            }
+        }
+
+        $order = \Illuminate\Support\Facades\DB::transaction(function() use ($orderId, $user, $request, $addressData, $productsByCode, $now, &$orderItemsData, &$responseItems) {
             $order = Order::create([
                 'id' => $orderId,
                 'user_id' => $user->id,
                 'total_price' => $request->totalPrice,
                 'payment_method' => strtoupper($request->paymentMethod),
-                'address_data' => $request->address,
+                'address_data' => $addressData,
                 'status' => 'Placed',
-                'estimated_delivery' => '30-45 mins',
+                'estimated_delivery' => $request->input('deliverySlot') ?: ($request->input('estimatedDelivery') ?: '30-45 mins'),
             ]);
 
             foreach ($request->cart as $item) {
@@ -917,10 +1026,36 @@ class ApiController extends Controller
             return $order;
         });
 
-        // Trigger Emails asynchronously (non-blocking)
+        // Trigger WhatsApp & Email notifications (isolated try/catch so failure in one never blocks another)
         $order->load('items', 'user');
-        \App\Services\OrderMailService::sendAdminNewOrderMail($order);
-        \App\Services\OrderMailService::sendCustomerStatusMail($order, 'Placed');
+
+        // 1. Customer WhatsApp Notification (Top Priority)
+        try {
+            \App\Services\OrderWhatsAppService::sendCustomerOrderSuccessNotification($order);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Customer Order WhatsApp notification error: ' . $e->getMessage());
+        }
+
+        // 2. Admin WhatsApp Notification
+        try {
+            \App\Services\OrderWhatsAppService::sendAdminNewOrderNotification($order);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Admin Order WhatsApp notification error: ' . $e->getMessage());
+        }
+
+        // 3. Customer Email
+        try {
+            \App\Services\OrderMailService::sendCustomerStatusMail($order, 'Placed');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Customer Email notification error: ' . $e->getMessage());
+        }
+
+        // 4. Admin Email
+        try {
+            \App\Services\OrderMailService::sendAdminNewOrderMail($order);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Admin Email notification error: ' . $e->getMessage());
+        }
 
         return response()->json([
             'id' => $order->id,

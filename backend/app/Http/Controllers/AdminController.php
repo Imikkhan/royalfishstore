@@ -71,8 +71,6 @@ class AdminController extends Controller
             'success' => true,
             'message' => $isSuccess ? "OTP sent to WhatsApp (+91 {$phone})" : ($waResult['message'] ?? "OTP delivery pending."),
             'whatsapp_status' => $isSuccess ? 'sent' : 'failed',
-            'debug_otp' => (config('app.debug') || app()->environment('local')) ? $otp : null,
-            'ip_to_whitelist' => !$isSuccess ? ($waResult['ip_to_whitelist'] ?? null) : null,
         ]);
     }
 
@@ -399,10 +397,10 @@ class AdminController extends Controller
         if (!Auth::user()->hasPermission('categories')) abort(403);
 
         if ($request->ajax()) {
-            $categories = Category::with('parent')->get();
+            $categories = Category::with('parent')->orderBy('sort_order', 'asc')->orderBy('id', 'asc')->get();
             return response()->json(['data' => $categories]);
         }
-        $parentCategories = Category::whereNull('parent_id')->get();
+        $parentCategories = Category::whereNull('parent_id')->orderBy('sort_order', 'asc')->orderBy('id', 'asc')->get();
         return view('admin.categories', compact('parentCategories'));
     }
 
@@ -416,6 +414,7 @@ class AdminController extends Controller
             'icon' => 'nullable|string|max:255',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'description' => 'nullable|string',
+            'sort_order' => 'nullable|integer|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -440,6 +439,7 @@ class AdminController extends Controller
             'icon' => $request->icon,
             'image' => $imagePath,
             'description' => $request->description,
+            'sort_order' => (int)$request->input('sort_order', 0),
             'is_active' => true,
         ]);
 
@@ -456,6 +456,7 @@ class AdminController extends Controller
             'icon' => 'nullable|string|max:255',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'description' => 'nullable|string',
+            'sort_order' => 'nullable|integer|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -482,6 +483,7 @@ class AdminController extends Controller
             'icon' => $request->icon,
             'image' => $imagePath,
             'description' => $request->description,
+            'sort_order' => (int)$request->input('sort_order', $category->sort_order ?? 0),
         ]);
 
         return response()->json(['success' => true, 'message' => 'Category updated successfully!', 'data' => $category]);
@@ -508,6 +510,25 @@ class AdminController extends Controller
         $category->save();
 
         return response()->json(['success' => true, 'message' => 'Status updated successfully.', 'is_active' => $category->is_active]);
+    }
+
+    public function categoriesUpdateOrder(Request $request)
+    {
+        if (!Auth::user()->hasPermission('categories')) abort(403);
+
+        $request->validate([
+            'id' => 'required|exists:categories,id',
+            'sort_order' => 'required|integer|min:0',
+        ]);
+
+        $category = Category::findOrFail($request->id);
+        $category->sort_order = (int)$request->sort_order;
+        $category->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Order for '{$category->name}' updated to position {$category->sort_order}."
+        ]);
     }
 
     /*
@@ -991,6 +1012,20 @@ class AdminController extends Controller
         $newStatus = $request->status;
 
         $order->status = $newStatus;
+        if ($newStatus === 'Cancelled') {
+            $order->shipment_status = 'Cancelled';
+        } elseif ($newStatus === 'Delivered') {
+            $order->shipment_status = 'Delivered';
+            if (empty($order->delivered_at)) {
+                $order->delivered_at = now();
+            }
+        } elseif ($newStatus === 'Dispatched') {
+            $order->shipment_status = 'Dispatched';
+        } elseif ($newStatus === 'Processing') {
+            $order->shipment_status = 'Processing';
+        } elseif ($newStatus === 'Placed') {
+            $order->shipment_status = 'Pending Assignment';
+        }
         $order->save();
 
         // If order was cancelled, restore product stock
@@ -1009,6 +1044,7 @@ class AdminController extends Controller
         }
 
         \App\Services\OrderMailService::sendCustomerStatusMail($order, $order->status);
+        \App\Services\OrderWhatsAppService::sendCustomerOrderStatusNotification($order, $order->status);
 
         return response()->json(['success' => true, 'message' => 'Order status updated successfully!', 'status' => $order->status]);
     }
@@ -1144,15 +1180,15 @@ class AdminController extends Controller
     */
     public function facebookAdIndex()
     {
-        if (!Auth::user()->hasPermission('settings') && !Auth::user()->hasPermission('*')) abort(403);
+        if (!Auth::user()->hasPermission('facebook_ad') && !Auth::user()->hasPermission('facebook-ad') && !Auth::user()->hasPermission('settings') && !Auth::user()->hasPermission('*')) abort(403);
 
         $categories = Category::where('is_active', true)->orderBy('name', 'asc')->get();
         $products = Product::where('is_active', true)->orderBy('name', 'asc')->get();
 
-        $setting = Setting::where('key', 'onepager_category_sections')->first();
-        $sections = $setting && !empty($setting->value) ? json_decode($setting->value, true) : [];
+        // 1. Sections
+        $sectionsSetting = Setting::where('key', 'onepager_category_sections')->first();
+        $sections = $sectionsSetting && !empty($sectionsSetting->value) ? json_decode($sectionsSetting->value, true) : [];
 
-        // If no sections configured yet, provide a sensible default section
         if (empty($sections)) {
             $defaultFishCategory = Category::where('slug', 'fresh-fish')->orWhere('name', 'like', '%fish%')->first();
             $defaultProducts = Product::where('is_active', true)->take(4)->pluck('id')->toArray();
@@ -1163,8 +1199,10 @@ class AdminController extends Controller
                     'badge' => '🔥 আজকের স্পেশাল অফার',
                     'title' => 'তাজা পদ্মার ইলিশ ও মাছের স্পেশাল কালেকশন',
                     'subtitle' => '১ কেজি+ সাইজের স্পেশাল ইলিশ ও তাজা মাছ—সরাসরি নদী থেকে আপনার ঘরে।',
+                    'layout_type' => 'grid', // 'grid' or 'single_showcase'
                     'category_id' => $defaultFishCategory ? $defaultFishCategory->id : '',
                     'product_ids' => $defaultProducts,
+                    'promo_headings' => [],
                     'view_all_label' => 'সকল মাছের কালেকশন দেখুন',
                     'view_all_link' => '#featured-products',
                     'is_active' => true
@@ -1172,26 +1210,108 @@ class AdminController extends Controller
             ];
         }
 
-        return view('admin.facebook_ad', compact('categories', 'products', 'sections'));
+        // 2. Hero Section
+        $heroSetting = Setting::where('key', 'onepager_hero')->first();
+        $hero = $heroSetting && !empty($heroSetting->value) ? json_decode($heroSetting->value, true) : [
+            'badge' => '🔥 আজকের স্পেশাল ইলিশ অফার',
+            'title' => 'কলকাতায় এবার ঘরে বসেই উপভোগ করুন তেলতেলে রাজকীয় ইলিশ',
+            'subtitle' => '১ কেজি+ সাইজের স্পেশাল ইলিশ—কাটিং, পরিষ্কার ও হাইজেনিক প্যাকেজিংসহ পৌঁছে যাবে আপনার রান্নাঘরে।',
+            'price_box_1_title' => '১ কেজি+ সম্পূর্ণ ইলিশ',
+            'price_box_1_price' => '₹1,399',
+            'price_box_1_unit' => '/কেজি',
+            'price_box_2_title' => '৭০-৮০ গ্রাম কাটা পিস',
+            'price_box_2_price' => '₹149',
+            'price_box_2_unit' => '/পিস',
+            'btn_order_text' => '🐟 এখনই অর্ডার করুন',
+            'btn_whatsapp_text' => 'WhatsApp-এ কথা বলুন',
+            'whatsapp_number' => '919876543210',
+            'whatsapp_msg' => 'Hi Royal Fish Store, আমি আজকের স্পেশাল পদ্মার ইলিশ অর্ডার করতে চাই।',
+            'hero_image' => '/hilsa_hero.png',
+            'delivery_badge' => '২৪ ঘণ্টার মধ্যে আপনার দরজায় Delivery',
+            'fresh_badge' => '100% FRESH'
+        ];
+
+        // 3. Customer Reviews Section
+        $reviewsSetting = Setting::where('key', 'onepager_reviews')->first();
+        $reviews = $reviewsSetting && !empty($reviewsSetting->value) ? json_decode($reviewsSetting->value, true) : [
+            'title' => 'What Real Seafood Lovers Say',
+            'subtitle' => 'Facebook par ad dekh kar order karne wale customer ke asli reviews',
+            'items' => [
+                [
+                    'name' => 'Sunita Roy',
+                    'city' => 'Kolkata • Verified Buyer',
+                    'rating' => 5,
+                    'text' => 'Diamond Harbour Hilsa order kiya tha Facebook ad dekh ke. Fish ekdum fresh thi, koi smell nahi aur tel bohot accha nikla curry me! Ab har weekend yahin se lenge.',
+                    'image' => 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&q=80',
+                    'ordered_item' => 'Ordered: Fresh Hilsa 1kg Cut'
+                ],
+                [
+                    'name' => 'Vikramaditya Rao',
+                    'city' => 'Mumbai • Verified Buyer',
+                    'rating' => 5,
+                    'text' => 'Surmai steaks and Jumbo tiger prawns were delivered in just 35 minutes! Cleaned so well that I just had to marinate and fry. 10/10 packing.',
+                    'image' => 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=120&q=80',
+                    'ordered_item' => 'Ordered: Surmai Steaks & Tiger Prawns'
+                ],
+                [
+                    'name' => 'Anand Verma',
+                    'city' => 'Delhi NCR • Verified Buyer',
+                    'rating' => 5,
+                    'text' => 'Mutton curry cut and country chicken both were super tender. Cash on delivery option made it very reliable to test for the first time.',
+                    'image' => 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80',
+                    'ordered_item' => 'Ordered: Goat Curry Cut & Farm Chicken'
+                ]
+            ]
+        ];
+
+        // 4. FAQs Section
+        $faqsSetting = Setting::where('key', 'onepager_faqs')->first();
+        $faqs = $faqsSetting && !empty($faqsSetting->value) ? json_decode($faqsSetting->value, true) : [
+            'title' => 'সাধারণ কিছু প্রশ্নের উত্তর',
+            'subtitle' => 'প্রয়োজনীয় তথ্য',
+            'items' => [
+                [
+                    'q' => 'কোন কোন PIN code-এ Delivery হবে?',
+                    'a' => "Newtown: 700156, 700157, 700136, 700135, 700160, 700161, 700162, 700163, 700132, 700152, 700059, 700101\nSalt Lake: 700091, 700106, 700107, 700102, 700064, 700010, 700046, 700101, 700100, 700105"
+                ],
+                [
+                    'q' => 'কাটা ইলিশে Delivery Charge কত?',
+                    'a' => '3 পিস অর্ডারে ₹100 delivery charge যোগ হবে। 4 পিস বা তার বেশি অর্ডার করলে delivery সম্পূর্ণ FREE।'
+                ],
+                [
+                    'q' => 'কত সময়ের মধ্যে Delivery হবে?',
+                    'a' => 'অর্ডার Confirm হওয়ার পর সাধারণত 24 ঘণ্টার মধ্যে Delivery করা হবে।'
+                ],
+                [
+                    'q' => 'Cash on Delivery আছে?',
+                    'a' => 'হ্যাঁ, মাছ হাতে পাওয়ার সময় Cash on Delivery-তে মূল্য দিতে পারবেন।'
+                ]
+            ]
+        ];
+
+        return view('admin.facebook_ad', compact('categories', 'products', 'sections', 'hero', 'reviews', 'faqs'));
     }
 
     public function facebookAdSave(Request $request)
     {
-        if (!Auth::user()->hasPermission('settings') && !Auth::user()->hasPermission('*')) abort(403);
+        if (!Auth::user()->hasPermission('facebook_ad') && !Auth::user()->hasPermission('facebook-ad') && !Auth::user()->hasPermission('settings') && !Auth::user()->hasPermission('*')) abort(403);
 
+        // 1. Process Sections
         $sections = $request->input('sections', []);
-
-        // Clean & format sections
-        $formatted = [];
+        $formattedSections = [];
         foreach ($sections as $sec) {
-            $formatted[] = [
+            $formattedSections[] = [
                 'id' => !empty($sec['id']) ? $sec['id'] : 'sec_' . uniqid(),
                 'badge' => $sec['badge'] ?? '🔥 আজকের স্পেশাল অফার',
                 'title' => $sec['title'] ?? 'স্পেশাল কালেকশন',
                 'subtitle' => $sec['subtitle'] ?? '',
+                'layout_type' => (isset($sec['layout_type']) && in_array($sec['layout_type'], ['grid', 'single_showcase'])) ? $sec['layout_type'] : 'grid',
                 'category_id' => !empty($sec['category_id']) ? (int)$sec['category_id'] : null,
                 'product_ids' => isset($sec['product_ids']) && is_array($sec['product_ids']) 
                     ? array_map('intval', array_values($sec['product_ids'])) 
+                    : [],
+                'promo_headings' => isset($sec['promo_headings']) && is_array($sec['promo_headings']) 
+                    ? $sec['promo_headings'] 
                     : [],
                 'view_all_label' => $sec['view_all_label'] ?? 'সকল পণ্য দেখুন (View All)',
                 'view_all_link' => $sec['view_all_link'] ?? '#featured-products',
@@ -1199,16 +1319,45 @@ class AdminController extends Controller
             ];
         }
 
-        // Save with full Bangla UNICODE support
         Setting::updateOrCreate(
             ['key' => 'onepager_category_sections'],
-            ['value' => json_encode($formatted, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)]
+            ['value' => json_encode($formattedSections, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)]
         );
+
+        // 2. Process Hero
+        $hero = $request->input('hero', null);
+        if ($hero && is_array($hero)) {
+            Setting::updateOrCreate(
+                ['key' => 'onepager_hero'],
+                ['value' => json_encode($hero, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)]
+            );
+        }
+
+        // 3. Process Reviews
+        $reviews = $request->input('reviews', null);
+        if ($reviews && is_array($reviews)) {
+            Setting::updateOrCreate(
+                ['key' => 'onepager_reviews'],
+                ['value' => json_encode($reviews, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)]
+            );
+        }
+
+        // 4. Process FAQs
+        $faqs = $request->input('faqs', null);
+        if ($faqs && is_array($faqs)) {
+            Setting::updateOrCreate(
+                ['key' => 'onepager_faqs'],
+                ['value' => json_encode($faqs, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)]
+            );
+        }
 
         return response()->json([
             'success' => true, 
-            'message' => 'Facebook Ad Page sections saved successfully!',
-            'sections' => $formatted
+            'message' => 'Facebook Ad Onepager settings saved successfully!',
+            'sections' => $formattedSections,
+            'hero' => $hero,
+            'reviews' => $reviews,
+            'faqs' => $faqs
         ]);
     }
 
@@ -1577,6 +1726,7 @@ class AdminController extends Controller
                 $rider->status = 'On Delivery';
                 $rider->save();
                 \App\Services\OrderMailService::sendRiderAssignedMail($order, $rider);
+                \App\Services\OrderWhatsAppService::sendRiderAssignedNotification($order, $rider);
             }
         } else {
             $order->shipment_status = 'Pending Assignment';
@@ -1585,6 +1735,7 @@ class AdminController extends Controller
         $order->save();
 
         \App\Services\OrderMailService::sendCustomerStatusMail($order, $order->shipment_status ?: $order->status);
+        \App\Services\OrderWhatsAppService::sendCustomerOrderStatusNotification($order, $order->shipment_status ?: $order->status);
 
         return response()->json(['success' => true, 'message' => 'Shipment assigned to delivery rider successfully!', 'order' => $order]);
     }
@@ -1625,6 +1776,7 @@ class AdminController extends Controller
         $order->save();
 
         \App\Services\OrderMailService::sendCustomerStatusMail($order, $order->shipment_status);
+        \App\Services\OrderWhatsAppService::sendCustomerOrderStatusNotification($order, $order->shipment_status);
 
         return response()->json(['success' => true, 'message' => 'Shipment status updated.', 'shipment_status' => $order->shipment_status]);
     }
@@ -1649,7 +1801,7 @@ class AdminController extends Controller
      */
     public function videosIndex()
     {
-        if (!Auth::user()->hasPermission('media') && !Auth::user()->hasPermission('*')) abort(403);
+        if (!Auth::user()->hasPermission('videos') && !Auth::user()->hasPermission('media') && !Auth::user()->hasPermission('*')) abort(403);
         $videos = Video::orderBy('sort_order', 'asc')->orderBy('created_at', 'desc')->get();
         return view('admin.videos', compact('videos'));
     }
@@ -1659,7 +1811,7 @@ class AdminController extends Controller
      */
     public function videosStore(Request $request)
     {
-        if (!Auth::user()->hasPermission('media') && !Auth::user()->hasPermission('*')) abort(403);
+        if (!Auth::user()->hasPermission('videos') && !Auth::user()->hasPermission('media') && !Auth::user()->hasPermission('*')) abort(403);
 
         $request->validate([
             'title' => 'required|string|max:255',
@@ -1687,7 +1839,7 @@ class AdminController extends Controller
      */
     public function videosUpdate(Request $request, $id)
     {
-        if (!Auth::user()->hasPermission('media') && !Auth::user()->hasPermission('*')) abort(403);
+        if (!Auth::user()->hasPermission('videos') && !Auth::user()->hasPermission('media') && !Auth::user()->hasPermission('*')) abort(403);
 
         $video = Video::findOrFail($id);
 
@@ -1717,7 +1869,7 @@ class AdminController extends Controller
      */
     public function videosDelete(Request $request)
     {
-        if (!Auth::user()->hasPermission('media') && !Auth::user()->hasPermission('*')) abort(403);
+        if (!Auth::user()->hasPermission('videos') && !Auth::user()->hasPermission('media') && !Auth::user()->hasPermission('*')) abort(403);
 
         $request->validate([
             'id' => 'required|exists:videos,id',
@@ -1733,7 +1885,7 @@ class AdminController extends Controller
      */
     public function videosToggleStatus(Request $request)
     {
-        if (!Auth::user()->hasPermission('media') && !Auth::user()->hasPermission('*')) abort(403);
+        if (!Auth::user()->hasPermission('videos') && !Auth::user()->hasPermission('media') && !Auth::user()->hasPermission('*')) abort(403);
 
         $request->validate([
             'id' => 'required|exists:videos,id',

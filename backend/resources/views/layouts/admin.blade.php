@@ -290,16 +290,19 @@
             </a>
             @endif
 
-            @if($hasPerm('products'))
+            @if($hasPerm('products') || $hasPerm('*'))
             <a href="{{ url('/admin/products') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ Str::startsWith($route, 'admin/products') ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
                 <i class="fa-solid fa-shrimp w-5"></i> <span class="sidebar-text">Products CRUD</span>
             </a>
+            @endif
+
+            @if($hasPerm('inventory') || $hasPerm('products') || $hasPerm('*'))
             <a href="{{ url('/admin/inventory') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ Str::startsWith($route, 'admin/inventory') ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
                 <i class="fa-solid fa-boxes-stacked w-5 text-amber-400"></i> <span class="sidebar-text">Stock & Inventory</span>
             </a>
             @endif
 
-            @if($hasPerm('orders'))
+            @if($hasPerm('orders') || $hasPerm('*'))
             <a href="{{ url('/admin/orders') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ Str::startsWith($route, 'admin/orders') ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
                 <i class="fa-solid fa-truck-ramp-box w-5"></i> <span class="sidebar-text">Orders Tracking</span>
             </a>
@@ -311,7 +314,7 @@
             </a>
             @endif
 
-            @if($hasPerm('media'))
+            @if($hasPerm('media') || $hasPerm('*'))
             <a href="{{ url('/admin/media') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ $route == 'admin/media' ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
                 <i class="fa-solid fa-photo-film w-5"></i> <span class="sidebar-text">Media Manager</span>
             </a>
@@ -323,19 +326,19 @@
             </a>
             @endif
 
-            @if($hasPerm('media') || $hasPerm('*'))
+            @if($hasPerm('videos') || $hasPerm('media') || $hasPerm('*'))
             <a href="{{ url('/admin/videos') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ Str::startsWith($route, 'admin/videos') ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
                 <i class="fa-solid fa-circle-play w-5 text-red-500"></i> <span class="sidebar-text">YouTube Videos</span>
             </a>
             @endif
 
-            @if($hasPerm('settings') || $hasPerm('*'))
+            @if($hasPerm('facebook_ad') || $hasPerm('facebook-ad') || $hasPerm('settings') || $hasPerm('*'))
             <a href="{{ url('/admin/facebook-ad') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ Str::startsWith($route, 'admin/facebook-ad') ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
                 <i class="fa-brands fa-facebook w-5 text-blue-400"></i> <span class="sidebar-text">Facebook Ad Page</span>
             </a>
             @endif
 
-            @if($hasPerm('settings'))
+            @if($hasPerm('settings') || $hasPerm('*'))
             <a href="{{ url('/admin/settings') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ $route == 'admin/settings' ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
                 <i class="fa-solid fa-sliders w-5"></i> <span class="sidebar-text">Settings Module</span>
             </a>
@@ -531,13 +534,19 @@
             </a>
             @endif
 
-            @if($hasPerm('products'))
+            @if($hasPerm('products') || $hasPerm('*'))
             <a href="{{ url('/admin/products') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ Str::startsWith($route, 'admin/products') ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
                 <i class="fa-solid fa-shrimp w-5"></i> Products CRUD
             </a>
             @endif
 
-            @if($hasPerm('orders'))
+            @if($hasPerm('inventory') || $hasPerm('products') || $hasPerm('*'))
+            <a href="{{ url('/admin/inventory') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ Str::startsWith($route, 'admin/inventory') ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
+                <i class="fa-solid fa-boxes-stacked w-5 text-amber-400"></i> Stock & Inventory
+            </a>
+            @endif
+
+            @if($hasPerm('orders') || $hasPerm('*'))
             <a href="{{ url('/admin/orders') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ Str::startsWith($route, 'admin/orders') ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
                 <i class="fa-solid fa-truck-ramp-box w-5"></i> Orders Tracking
             </a>
@@ -549,7 +558,7 @@
             </a>
             @endif
 
-            @if($hasPerm('media'))
+            @if($hasPerm('media') || $hasPerm('*'))
             <a href="{{ url('/admin/media') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ $route == 'admin/media' ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
                 <i class="fa-solid fa-photo-film w-5"></i> Media Manager
             </a>
@@ -561,13 +570,19 @@
             </a>
             @endif
 
-            @if($hasPerm('settings') || $hasPerm('*'))
+            @if($hasPerm('videos') || $hasPerm('media') || $hasPerm('*'))
+            <a href="{{ url('/admin/videos') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ Str::startsWith($route, 'admin/videos') ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
+                <i class="fa-solid fa-circle-play w-5 text-red-500"></i> YouTube Videos
+            </a>
+            @endif
+
+            @if($hasPerm('facebook_ad') || $hasPerm('facebook-ad') || $hasPerm('settings') || $hasPerm('*'))
             <a href="{{ url('/admin/facebook-ad') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ Str::startsWith($route, 'admin/facebook-ad') ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
                 <i class="fa-brands fa-facebook w-5 text-blue-400"></i> Facebook Ad Page
             </a>
             @endif
 
-            @if($hasPerm('settings'))
+            @if($hasPerm('settings') || $hasPerm('*'))
             <a href="{{ url('/admin/settings') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ $route == 'admin/settings' ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
                 <i class="fa-solid fa-sliders w-5"></i> Settings Module
             </a>

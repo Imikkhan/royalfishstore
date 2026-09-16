@@ -153,35 +153,18 @@ interface AppContextType {
   // Order State
   orders: Order[];
   lastPlacedOrder: Order | null;
-  placeOrder: () => void;
+  placeOrder: (deliverySlot?: string) => Promise<void>;
+  refreshOrders: () => Promise<void>;
   isPlacingOrder: boolean;
   showOrderSuccessModal: boolean;
+  setShowOrderSuccessModal: React.Dispatch<React.SetStateAction<boolean>>;
   // Toast Notification System
   toast: ToastMessage | null;
   showToast: (message: string, type?: 'success' | 'error' | 'info' | 'warning') => void;
   hideToast: () => void;
 }
 
-const DEFAULT_ADDRESSES: Address[] = [
-  {
-    id: 'addr-1',
-    name: 'Home (Default)',
-    type: 'Home',
-    addressLine: 'Flat 402, Royal Residency, Marine Drive',
-    city: 'Mumbai',
-    zipCode: '400002',
-    phone: '+91 98765 43210'
-  },
-  {
-    id: 'addr-2',
-    name: 'Office',
-    type: 'Work',
-    addressLine: 'Wing B, Level 12, Tech Park Central',
-    city: 'Mumbai',
-    zipCode: '400051',
-    phone: '+91 98765 43211'
-  }
-];
+const DEFAULT_ADDRESSES: Address[] = [];
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -260,15 +243,58 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [couponCode, setCouponCode] = useState<string>('');
   const [discountAmount, setDiscountAmount] = useState<number>(0);
 
-  // Addresses State
+  // Addresses State (filter out old dummy demo addresses)
   const [addresses, setAddresses] = useState<Address[]>(() => {
     const saved = localStorage.getItem('royal-fish-addresses');
-    return saved ? JSON.parse(saved) : DEFAULT_ADDRESSES;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const valid = parsed.filter((a: Address) => 
+            !a.addressLine?.includes('Royal Residency') &&
+            !a.addressLine?.includes('Marine Drive') &&
+            !a.addressLine?.includes('Tech Park Central') &&
+            !a.phone?.includes('98765 43210') &&
+            !a.phone?.includes('98765 43211')
+          );
+          return valid;
+        }
+      } catch (e) {}
+    }
+    return DEFAULT_ADDRESSES;
   });
-  const [selectedAddressId, setSelectedAddressId] = useState<string | null>('addr-1');
+
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(() => {
+    const saved = localStorage.getItem('royal-fish-addresses');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const valid = parsed.filter((a: Address) => 
+            !a.addressLine?.includes('Royal Residency') &&
+            !a.phone?.includes('98765 43210')
+          );
+          if (valid.length > 0) return valid[0].id;
+        }
+      } catch (e) {}
+    }
+    return null;
+  });
+
+  // Sync addresses to localStorage & keep selectedAddressId valid
+  useEffect(() => {
+    localStorage.setItem('royal-fish-addresses', JSON.stringify(addresses));
+    if (addresses.length > 0) {
+      if (!selectedAddressId || !addresses.some(a => a.id === selectedAddressId)) {
+        setSelectedAddressId(addresses[0].id);
+      }
+    } else {
+      setSelectedAddressId(null);
+    }
+  }, [addresses]);
 
   // Payment Method
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('upi');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('cod');
 
   // Orders state
   const [orders, setOrders] = useState<Order[]>(() => {
@@ -326,10 +352,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         })
         .then(data => {
           if (Array.isArray(data)) {
-            setCategories(data.map((cat: any) => ({
+            const mapped = data.map((cat: any) => ({
               ...cat,
+              sort_order: cat.sort_order !== undefined ? Number(cat.sort_order) : 0,
               image: resolveImageUrl(cat.image)
-            })));
+            })).sort((a: any, b: any) => ((a.sort_order || 0) - (b.sort_order || 0)) || ((a.id || 0) - (b.id || 0)));
+            setCategories(mapped);
           }
           setIsLoadingCategories(false);
         })
@@ -489,6 +517,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const loggedInUser: User = { name, phone, email, isLoggedIn: true };
     setUser(loggedInUser);
     localStorage.setItem('royal-fish-user', JSON.stringify(loggedInUser));
+
+    // Automatically sync user's registered phone into address book if it has dummy demo numbers
+    const userPhoneFormatted = phone.startsWith('+91') ? phone : `+91 ${phone.trim()}`;
+    setAddresses(prev => {
+      const updated = prev.map(a => {
+        if (!a.phone || a.phone.includes('98765 43210') || a.phone.includes('9876543210')) {
+          return { ...a, phone: userPhoneFormatted };
+        }
+        return a;
+      });
+      localStorage.setItem('royal-fish-addresses', JSON.stringify(updated));
+      return updated;
+    });
 
     if (token) {
       localStorage.setItem('royal-fish-token', token);
@@ -709,7 +750,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Place Order
-  const placeOrder = async () => {
+  const placeOrder = async (deliverySlot?: string) => {
     if (cart.length === 0 || isPlacingOrder) return;
     
     // Check Minimum Order Amount
@@ -725,8 +766,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
+    if (!selectedAddressId || addresses.length === 0) {
+      showToast("Please add your delivery address to proceed.", "warning");
+      return;
+    }
+
     setIsPlacingOrder(true);
-    const selectedAddress = addresses.find(a => a.id === selectedAddressId) || addresses[0];
+    const rawAddress = addresses.find(a => a.id === selectedAddressId) || addresses[0];
+    const userPhoneClean = user?.phone ? (user.phone.startsWith('+91') ? user.phone : `+91 ${user.phone.trim()}`) : '';
+    const selectedAddress = {
+      ...rawAddress,
+      phone: (rawAddress?.phone && !rawAddress.phone.includes('98765 43210') && !rawAddress.phone.includes('9876543210')) 
+        ? rawAddress.phone 
+        : (userPhoneClean || rawAddress?.phone || '')
+    };
 
     try {
       const res = await fetch(`${API_BASE_URL}/orders`, {
@@ -739,7 +792,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           cart: cart,
           paymentMethod: selectedPaymentMethod,
           address: selectedAddress,
-          totalPrice: cartTotal
+          totalPrice: cartTotal,
+          deliverySlot: deliverySlot || '30-45 mins'
         })
       });
 
@@ -766,6 +820,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       showToast("Network connection error. Please try again.", "error");
     } finally {
       setIsPlacingOrder(false);
+    }
+  };
+
+  const refreshOrders = async () => {
+    const token = localStorage.getItem('royal-fish-token');
+    if (!token) return;
+    try {
+      const ordRes = await fetch(`${API_BASE_URL}/orders`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (ordRes.ok) {
+        const ordData = await ordRes.json();
+        if (Array.isArray(ordData)) {
+          setOrders(ordData);
+        }
+      }
+    } catch(err) {
+      console.error('Failed to sync orders from API', err);
     }
   };
 
@@ -814,6 +886,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSelectedPaymentMethod,
         orders,
         placeOrder,
+        refreshOrders,
         isPlacingOrder,
         showOrderSuccessModal,
         setShowOrderSuccessModal,

@@ -9,10 +9,11 @@ class Category extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['parent_id', 'name', 'slug', 'icon', 'image', 'description', 'is_active'];
+    protected $fillable = ['parent_id', 'name', 'slug', 'icon', 'image', 'description', 'sort_order', 'is_active'];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'sort_order' => 'integer',
     ];
 
     public function products()

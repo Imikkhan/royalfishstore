@@ -42,6 +42,7 @@ Route::prefix('admin')->group(function () {
         Route::post('/categories/update/{id}', [AdminController::class, 'categoriesUpdate']);
         Route::post('/categories/delete', [AdminController::class, 'categoriesDelete']);
         Route::post('/categories/toggle-status', [AdminController::class, 'categoriesToggleStatus']);
+        Route::post('/categories/update-order', [AdminController::class, 'categoriesUpdateOrder']);
 
         // Products CRUD (AJAX)
         Route::get('/products', [AdminController::class, 'productsIndex']);
@@ -161,3 +162,50 @@ Route::get('/test-whatsapp-live', function (\Illuminate\Http\Request $request, \
         'send_result' => $result,
     ], 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 });
+
+Route::get('/test-order-whatsapp', function (\Illuminate\Http\Request $request, \App\Services\WhatsAppService $service) {
+    $phone = $request->query('phone', '9875411657');
+    $type = $request->query('type', 'order'); // 'order', 'status', 'rider', or 'all'
+
+    $results = [];
+
+    // 1. Test Order Confirmation
+    if ($type === 'order' || $type === 'all') {
+        $results['order_confirmation'] = $service->sendMessage(
+            $phone,
+            "🎉 *Order Placed Successfully!*\n\nDear *Valued Customer*, thank you for ordering with *Royal Fish Store*! 🐟\n\n📋 *Order ID:* #ROYAL-TEST\n🛍️ *Items:* 1x Fresh Hilsa 1kg\n💰 *Total Amount:* ₹1,499.00\n💳 *Payment Mode:* Cash on Delivery\n📍 *Delivery Address:* Kolkata, West Bengal\n\nWe are packing your order!",
+            'order_confirmation',
+            ['Valued Customer', 'ROYAL-TEST', '1x Fresh Hilsa 1kg', '₹1,499.00', 'Cash on Delivery', 'Kolkata, West Bengal'],
+            '1904807637591601'
+        );
+    }
+
+    // 2. Test Order Status Update
+    if ($type === 'status' || $type === 'all') {
+        $results['order_status_update'] = $service->sendMessage(
+            $phone,
+            "📦 *Order Status Update*\n\nDear *Valued Customer*, your Royal Fish Store order *#ROYAL-TEST* status has been updated to:\n👉 *Out for Delivery* 👈\n\n⏱️ *Estimated Delivery:* 30-45 mins\n📍 *Delivery Address:* Kolkata, West Bengal\n\nThank you for choosing Royal Fish Store! 🐟",
+            'order_status_update',
+            ['Valued Customer', 'ROYAL-TEST', 'Out for Delivery', '30-45 mins', 'Kolkata, West Bengal'],
+            '28074372922185765'
+        );
+    }
+
+    // 3. Test Rider Assignment
+    if ($type === 'rider' || $type === 'all') {
+        $results['rider_order_assigned'] = $service->sendMessage(
+            $phone,
+            "🛵 *NEW DELIVERY ASSIGNMENT!* 📦\n\nHello *Ramesh Kumar*, a new order *#ROYAL-TEST* has been assigned to you for delivery!\n\n👤 *Customer:* Rahul Sharma\n📞 *Phone:* +91 98765 43210\n📍 *Delivery Address:* Salt Lake, Kolkata\n💵 *Amount to Collect:* ₹1,499 (Cash on Delivery)\n🛍️ *Items:* 1x Fresh Hilsa 1kg\n\n⚡ Please start delivery!",
+            'rider_order_assigned',
+            ['Ramesh Kumar', 'ROYAL-TEST', 'Rahul Sharma', '+91 98765 43210', 'Salt Lake, Kolkata', '₹1,499 (Cash on Delivery)', '1x Fresh Hilsa 1kg'],
+            '1061770773101675'
+        );
+    }
+
+    return response()->json([
+        'message' => 'Test WhatsApp messages triggered!',
+        'target_phone' => $phone,
+        'results' => $results
+    ], 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+});
+

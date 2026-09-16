@@ -12,6 +12,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const {
     navigateTo,
     setSelectedCategory,
+    setSelectedSubCategory,
     theme,
     toggleTheme,
     cartCount,
@@ -30,25 +31,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       />
 
       {/* Drawer content */}
-      <div className="absolute inset-y-0 left-0 max-w-xs w-full bg-white dark:bg-slate-900 shadow-2xl flex flex-col justify-between py-6 px-4 z-50 transform transition-transform duration-300 ease-out">
-        <div>
-          {/* Header */}
-          <div className="flex items-center justify-between pb-6 border-b border-gray-100 dark:border-slate-800">
-            <div className="flex items-center gap-2.5">
-              <img src="/logo.png" alt="Royal Fish Store Logo" className="h-10 w-auto object-contain" />
-            </div>
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
-              aria-label="Close menu"
-              id="btn-close-sidebar"
-            >
-              <X className="w-5 h-5" />
-            </button>
+      <div className="absolute inset-y-0 left-0 max-w-xs w-full bg-white dark:bg-slate-900 shadow-2xl flex flex-col z-50 transform transition-transform duration-300 ease-out">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100 dark:border-slate-800 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <img src="/logo.png" alt="Royal Fish Store Logo" className="h-10 w-auto object-contain" />
           </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
+            aria-label="Close menu"
+            id="btn-close-sidebar"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
+        {/* Scrollable drawer body */}
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
           {/* Quick Stats/Badge */}
-          <div className="my-5 p-3 rounded-xl bg-red-50/50 dark:bg-slate-800/50 border border-red-100/40 dark:border-slate-800">
+          <div className="p-3 rounded-xl bg-red-50/50 dark:bg-slate-800/50 border border-red-100/40 dark:border-slate-800">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-xl">💯</span>
@@ -77,23 +79,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             >
               <Home className="w-4 h-4 text-gray-400" />
               <span>Home Screen</span>
-            </button>
-
-            <button
-              onClick={() => {
-                navigateTo('onepager');
-                onClose();
-              }}
-              className="w-full flex items-center justify-between px-3 py-2 text-sm font-bold text-[#fc490f] bg-orange-50/70 dark:bg-orange-950/30 hover:bg-orange-100 rounded-xl transition-colors border border-orange-200/50"
-              id="sidebar-link-onepager"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-base">🔥</span>
-                <span>FB Special Deals (Onepager)</span>
-              </div>
-              <span className="bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full">
-                20% OFF
-              </span>
             </button>
 
             <button
@@ -148,7 +133,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           </nav>
 
           {/* Category quick filters */}
-          <div className="mt-6">
+          <div>
             <h3 className="px-3 text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
               Browse Seafood & Meat
             </h3>
@@ -159,12 +144,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 <button
                   key={cat.id}
                   onClick={() => {
-                    navigateTo('home');
                     setSelectedCategory(catId);
+                    setSelectedSubCategory(null);
+                    navigateTo('category-view');
                     onClose();
-                    // Smooth scroll down to products section
-                    const el = document.getElementById('products-section');
-                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50/30 dark:hover:bg-slate-800/40 rounded-xl transition-colors"
                 >
@@ -178,8 +162,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Footer info & Offline Toggle */}
-        <div className="space-y-4 pt-6 border-t border-gray-100 dark:border-slate-800">
-          <div className="text-xs text-gray-400 dark:text-gray-500 px-2 space-y-2">
+        <div className="space-y-3 px-4 py-4 border-t border-gray-100 dark:border-slate-800 shrink-0 bg-gray-50/30 dark:bg-slate-900/40">
+          <div className="text-xs text-gray-400 dark:text-gray-500 px-2 space-y-1.5">
             <div className="flex items-center gap-2">
               <Phone className="w-3.5 h-3.5 text-gray-400" />
               <span>Support: 1800-419-786</span>
@@ -192,7 +176,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
           <div className="text-center text-[10px] text-gray-400 px-2">
             © 2026 Royal Fish Store Pvt Ltd.
-            <div className="mt-1 font-mono text-[9px] text-gray-500">
+            <div className="mt-0.5 font-mono text-[9px] text-gray-500">
               Inspired by Licious Quality
             </div>
           </div>

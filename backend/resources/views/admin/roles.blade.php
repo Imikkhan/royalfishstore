@@ -58,7 +58,7 @@
 
             <div>
                 <label class="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Permissions</label>
-                <div class="grid grid-cols-2 gap-3 max-h-52 overflow-y-auto p-2 bg-slate-50 dark:bg-slate-950/40 rounded-xl border border-slate-200/40 dark:border-slate-800">
+                <div class="grid grid-cols-2 gap-3 max-h-64 overflow-y-auto p-3 bg-slate-50 dark:bg-slate-950/40 rounded-xl border border-slate-200/40 dark:border-slate-800">
                     <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer">
                         <input type="checkbox" name="permissions[]" value="*" class="rounded border-slate-300 text-red-600"> Full Access (*)
                     </label>
@@ -69,25 +69,37 @@
                         <input type="checkbox" name="permissions[]" value="roles" class="rounded border-slate-300 text-red-600"> Roles Admin
                     </label>
                     <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer">
-                        <input type="checkbox" name="permissions[]" value="users" class="rounded border-slate-300 text-red-600"> User Admin
+                        <input type="checkbox" name="permissions[]" value="users" class="rounded border-slate-300 text-red-600"> Customers & Staff
                     </label>
                     <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer">
                         <input type="checkbox" name="permissions[]" value="categories" class="rounded border-slate-300 text-red-600"> Categories
                     </label>
                     <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer">
-                        <input type="checkbox" name="permissions[]" value="products" class="rounded border-slate-300 text-red-600"> Products
+                        <input type="checkbox" name="permissions[]" value="products" class="rounded border-slate-300 text-red-600"> Products CRUD
                     </label>
                     <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer">
-                        <input type="checkbox" name="permissions[]" value="orders" class="rounded border-slate-300 text-red-600"> Orders
+                        <input type="checkbox" name="permissions[]" value="inventory" class="rounded border-slate-300 text-red-600"> Stock & Inventory
                     </label>
                     <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer">
-                        <input type="checkbox" name="permissions[]" value="logistics" class="rounded border-slate-300 text-red-600"> Logistics & Fleet
+                        <input type="checkbox" name="permissions[]" value="orders" class="rounded border-slate-300 text-red-600"> Orders Tracking
+                    </label>
+                    <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer">
+                        <input type="checkbox" name="permissions[]" value="logistics" class="rounded border-slate-300 text-red-600"> Logistics & Shipping
                     </label>
                     <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer">
                         <input type="checkbox" name="permissions[]" value="media" class="rounded border-slate-300 text-red-600"> Media Manager
                     </label>
                     <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer">
-                        <input type="checkbox" name="permissions[]" value="settings" class="rounded border-slate-300 text-red-600"> Settings
+                        <input type="checkbox" name="permissions[]" value="slides" class="rounded border-slate-300 text-red-600"> Hero Banners
+                    </label>
+                    <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer">
+                        <input type="checkbox" name="permissions[]" value="videos" class="rounded border-slate-300 text-red-600"> YouTube Videos
+                    </label>
+                    <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer text-blue-600 dark:text-blue-400 font-bold">
+                        <input type="checkbox" name="permissions[]" value="facebook_ad" class="rounded border-slate-300 text-blue-600"> Facebook Ad Page
+                    </label>
+                    <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer">
+                        <input type="checkbox" name="permissions[]" value="settings" class="rounded border-slate-300 text-red-600"> Settings Module
                     </label>
                 </div>
             </div>
@@ -173,6 +185,18 @@
         });
 
         $('#close-modal, #btn-cancel').click(closeModal);
+
+        // Full Access toggle UX
+        $('input[name="permissions[]"][value="*"]').change(function() {
+            if ($(this).is(':checked')) {
+                $('input[name="permissions[]"]').not(this).prop('checked', false);
+            }
+        });
+        $('input[name="permissions[]"]').not('[value="*"]').change(function() {
+            if ($(this).is(':checked')) {
+                $('input[name="permissions[]"][value="*"]').prop('checked', false);
+            }
+        });
 
         // Edit button callback
         $('#roles-table').on('click', '.btn-edit', function() {

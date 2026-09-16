@@ -26,9 +26,7 @@ export const Login: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const [timer, setTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
-  const [debugOtp, setDebugOtp] = useState<string | null>(null);
   const [whatsappStatus, setWhatsappStatus] = useState<'sent' | 'failed' | null>(null);
-  const [ipToWhitelist, setIpToWhitelist] = useState<string | null>(null);
 
   const otpRef0 = useRef<HTMLInputElement>(null);
   const otpRef1 = useRef<HTMLInputElement>(null);
@@ -100,7 +98,6 @@ export const Login: React.FC = () => {
     e.preventDefault();
     setError('');
     setInfoMessage('');
-    setDebugOtp(null);
 
     const cleanPhone = phone.replace(/\D/g, '');
     if (!cleanPhone || cleanPhone.length < 10) {
@@ -123,10 +120,6 @@ export const Login: React.FC = () => {
         setTimer(30);
         setCanResend(false);
         setWhatsappStatus(data.whatsapp_status || 'sent');
-        setIpToWhitelist(data.ip_to_whitelist || null);
-        if (data.debug_otp) {
-          setDebugOtp(data.debug_otp);
-        }
         setInfoMessage(data.message || `OTP sent to your WhatsApp +91 ${cleanPhone}`);
       } else {
         setStep('otp');
@@ -164,10 +157,6 @@ export const Login: React.FC = () => {
         setTimer(30);
         setCanResend(false);
         setWhatsappStatus(data.whatsapp_status || 'sent');
-        setIpToWhitelist(data.ip_to_whitelist || null);
-        if (data.debug_otp) {
-          setDebugOtp(data.debug_otp);
-        }
         setInfoMessage(data.message || 'New OTP has been generated.');
       } else {
         setTimer(30);
@@ -345,25 +334,6 @@ export const Login: React.FC = () => {
                 <span className="text-base">{whatsappStatus === 'failed' ? '⚠️' : '💬'}</span>
                 <span>{infoMessage}</span>
               </div>
-              {debugOtp && (
-                <div className="mt-1 pt-1.5 border-t border-amber-200 dark:border-amber-800 flex items-center justify-between">
-                  <span className="text-[11px] font-medium text-gray-700 dark:text-gray-300">
-                    Your verification code is: <strong className="text-amber-700 dark:text-amber-300 font-mono tracking-widest text-sm">{debugOtp}</strong>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => fillOtpCode(debugOtp)}
-                    className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[10px] font-black cursor-pointer shadow-xs active:scale-95 transition-all"
-                  >
-                    Auto-fill OTP
-                  </button>
-                </div>
-              )}
-              {ipToWhitelist && (
-                <div className="text-[10px] text-amber-700 dark:text-amber-300 font-normal mt-0.5">
-                  💡 <em>To receive live WhatsApp SMS, whitelist IP <code className="font-bold bg-amber-100 dark:bg-amber-900/60 px-1 py-0.5 rounded">{ipToWhitelist}</code> in your Codebey dashboard.</em>
-                </div>
-              )}
             </div>
           )}
 

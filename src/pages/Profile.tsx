@@ -5,11 +5,20 @@ import { User as UserIcon, MapPin, ShoppingBag, Phone, Mail, ShieldAlert, CheckC
 import { API_BASE_URL } from '../config';
 
 export const Profile: React.FC = () => {
-  const { orders, addresses, lastPlacedOrder, navigateTo, user, logout } = useApp();
+  const { orders, addresses, lastPlacedOrder, navigateTo, user, logout, refreshOrders } = useApp();
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [activeChatOrder, setActiveChatOrder] = useState<Order | null>(null);
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [chatInput, setChatInput] = useState('');
+
+  // Periodically refresh orders to sync status from admin updates in real-time
+  useEffect(() => {
+    refreshOrders();
+    const interval = setInterval(() => {
+      refreshOrders();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const fetchChatMessages = async (orderId: string) => {
     try {
@@ -193,6 +202,9 @@ export const Profile: React.FC = () => {
 
                 const currentStepIdx = getStepIndex(order.status);
 
+                const isCancelled = order.status?.toLowerCase() === 'cancelled';
+                const isDelivered = order.status?.toLowerCase() === 'delivered';
+
                 return (
                   <div 
                     key={order.id}
@@ -210,9 +222,11 @@ export const Profile: React.FC = () => {
                           
                           {/* Status Label Pill */}
                           <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md ${
-                            order.status === 'Delivered'
-                              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'
-                              : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 animate-pulse'
+                            isDelivered
+                              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50'
+                              : isCancelled
+                                ? 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/50'
+                                : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 animate-pulse'
                           }`}>
                             {order.status}
                           </span>
@@ -221,7 +235,7 @@ export const Profile: React.FC = () => {
                       </div>
 
                       <div className="flex items-center gap-3 justify-between sm:justify-end">
-                        {order.status !== 'Delivered' && (
+                        {!isDelivered && !isCancelled && (
                           <button
                             onClick={() => setActiveChatOrder(order)}
                             className="px-3 py-1.5 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shrink-0"
@@ -247,45 +261,67 @@ export const Profile: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Progress step bar */}
-                    <div className="py-2">
-                      <div className="flex items-center justify-between text-[11px] font-bold mb-2">
-                        {statusSteps.map((stepName, idx) => {
-                          const isDone = idx <= currentStepIdx;
-                          const isCurrent = idx === currentStepIdx;
+                    {/* Progress step bar or Cancelled Alert */}
+                    {isCancelled ? (
+                      <div className="py-2.5">
+                        <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40 rounded-xl p-3 flex items-center gap-3">
+                          <div className="w-7 h-7 rounded-full bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 flex items-center justify-center font-black text-sm shrink-0">
+                            ✕
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-red-700 dark:text-red-300">
+                              Order Cancelled
+                            </p>
+                            <p className="text-[10px] text-red-600/80 dark:text-red-400/80">
+                              This order has been cancelled. If you have questions, please contact our support team.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="py-2">
+                        <div className="flex items-center justify-between text-[11px] font-bold mb-2">
+                          {statusSteps.map((stepName, idx) => {
+                            const isDone = idx <= currentStepIdx;
+                            const isCurrent = idx === currentStepIdx;
 
-                          return (
-                            <div 
-                              key={stepName} 
-                              className={`flex flex-col items-center gap-1 ${
-                                isDone 
-                                  ? 'text-red-600 dark:text-red-400 font-extrabold' 
-                                  : 'text-gray-400 dark:text-slate-600 font-medium'
-                              }`}
-                            >
-                              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${
-                                isCurrent 
-                                  ? 'bg-red-600 text-white ring-4 ring-red-100 dark:ring-red-950/50' 
-                                  : isDone 
-                                    ? 'bg-red-100 dark:bg-red-950/40 text-red-600' 
-                                    : 'bg-gray-100 dark:bg-slate-800 text-gray-400'
-                              }`}>
-                                {isDone ? '✓' : idx + 1}
+                            return (
+                              <div 
+                                key={stepName} 
+                                className={`flex flex-col items-center gap-1 ${
+                                  isDelivered
+                                    ? 'text-emerald-600 dark:text-emerald-400 font-extrabold'
+                                    : isDone 
+                                      ? 'text-red-600 dark:text-red-400 font-extrabold' 
+                                      : 'text-gray-400 dark:text-slate-600 font-medium'
+                                }`}
+                              >
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${
+                                  isDelivered
+                                    ? 'bg-emerald-600 text-white shadow-xs'
+                                    : isCurrent 
+                                      ? 'bg-red-600 text-white ring-4 ring-red-100 dark:ring-red-950/50' 
+                                      : isDone 
+                                        ? 'bg-red-100 dark:bg-red-950/40 text-red-600' 
+                                        : 'bg-gray-100 dark:bg-slate-800 text-gray-400'
+                                }`}>
+                                  {isDelivered || isDone ? '✓' : idx + 1}
+                                </div>
+                                <span className="text-[10px] text-center">{stepName}</span>
                               </div>
-                              <span className="text-[10px] text-center">{stepName}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
+                            );
+                          })}
+                        </div>
 
-                      {/* Bar Line */}
-                      <div className="w-full bg-gray-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                        <div 
-                          className="bg-gradient-to-r from-red-500 to-rose-600 h-full transition-all duration-500"
-                          style={{ width: `${((currentStepIdx + 1) / statusSteps.length) * 100}%` }}
-                        />
+                        {/* Bar Line */}
+                        <div className="w-full bg-gray-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                          <div 
+                            className={`${isDelivered ? 'bg-emerald-500' : 'bg-gradient-to-r from-red-500 to-rose-600'} h-full transition-all duration-500`}
+                            style={{ width: `${((currentStepIdx + 1) / statusSteps.length) * 100}%` }}
+                          />
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Expanded Items & Address Detail */}
                     {isExpanded && (

@@ -361,8 +361,11 @@
                     let custName = order.user ? order.user.name : (address.name || 'Guest');
                     
                     $('#lbl-cust-name').text(custName);
-                    $('#lbl-cust-address').text(`${address.addressLine || ''}, ${address.city || ''} - ${address.zipCode || ''}`);
-                    $('#lbl-cust-phone').text(address.phone || order.user?.phone || '');
+                    let rawPhone = (address.phone || '').trim();
+                    let displayPhone = (rawPhone && !rawPhone.includes('98765 43210') && !rawPhone.includes('9876543210')) 
+                        ? rawPhone 
+                        : (order.user?.phone || rawPhone || 'N/A');
+                    $('#lbl-cust-phone').text(displayPhone);
                     
                     $('#lbl-order-status').text(order.status);
                     $('#sel-order-status').val(order.status).trigger('change');

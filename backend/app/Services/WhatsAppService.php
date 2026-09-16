@@ -278,4 +278,200 @@ class WhatsAppService
             'last_error' => $lastError
         ];
     }
+
+    /**
+     * Send a formatted WhatsApp message (Order Success, Status Update, Rider Assignment).
+     * Attempts:
+     * 1. Codebey Template (if templateName or templateId provided and active)
+     * 2. Codebey Direct Message (/inbox/send-message) - instant text delivery with markdown/emojis
+     * 3. Meta Cloud API (Template or Direct Text)
+     *
+     * @param string $phone
+     * @param string $textMessage
+     * @param string|null $templateName
+     * @param array $templateParams
+     * @param string|null $templateId
+     * @return array
+     */
+    public function sendMessage(string $phone, string $textMessage, ?string $templateName = null, array $templateParams = [], ?string $templateId = null): array
+    {
+        $parsed = $this->parsePhone($phone);
+        $mobileCode = $parsed['code'];
+        $mobileNumber = $parsed['number'];
+        $fullPhone = $parsed['full'];
+
+        $lastError = null;
+
+        // ----------------------------------------------------
+        // 1. PRIMARY METHOD: Meta WhatsApp Cloud API (Approved Templates & 400ms Delivery)
+        // ----------------------------------------------------
+        if (!empty($this->metaAccessToken)) {
+            $metaUrl = rtrim($this->metaApiUrl, '/') . '/' . $this->phoneNumberId . '/messages';
+
+            // 1.A Meta Approved Template
+            if (!empty($templateName) && !empty($templateParams)) {
+                try {
+                    $componentParams = [];
+                    foreach ($templateParams as $val) {
+                        $componentParams[] = ['type' => 'text', 'text' => (string)$val];
+                    }
+
+                    $payload = [
+                        'messaging_product' => 'whatsapp',
+                        'recipient_type' => 'individual',
+                        'to' => $fullPhone,
+                        'type' => 'template',
+                        'template' => [
+                            'name' => $templateName,
+                            'language' => ['code' => $this->templateLang],
+                            'components' => [
+                                [
+                                    'type' => 'body',
+                                    'parameters' => $componentParams
+                                ]
+                            ]
+                        ]
+                    ];
+
+                    $response = Http::withToken($this->metaAccessToken)->timeout(6)->post($metaUrl, $payload);
+                    $resJson = $response->json();
+                    Log::info("Meta Cloud WhatsApp Template ({$templateName}) to {$fullPhone}: Status {$response->status()}", ['body' => $resJson]);
+
+                    if ($response->successful()) {
+                        return [
+                            'success' => true,
+                            'provider' => 'meta_template',
+                            'message' => 'WhatsApp message sent via Meta Cloud Template.',
+                            'data' => $resJson
+                        ];
+                    }
+                    if (isset($resJson['error']['message'])) {
+                        $lastError = 'Meta API: ' . $resJson['error']['message'];
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning("Meta WhatsApp Template Exception ({$templateName}): " . $e->getMessage());
+                    $lastError = $e->getMessage();
+                }
+            }
+
+            // 1.B Meta Direct Text (fallback if template not used or failed)
+            if (!empty($textMessage)) {
+                try {
+                    $payload = [
+                        'messaging_product' => 'whatsapp',
+                        'recipient_type' => 'individual',
+                        'to' => $fullPhone,
+                        'type' => 'text',
+                        'text' => [
+                            'preview_url' => false,
+                            'body' => $textMessage
+                        ]
+                    ];
+
+                    $response = Http::withToken($this->metaAccessToken)->timeout(6)->post($metaUrl, $payload);
+                    $resJson = $response->json();
+                    if ($response->successful()) {
+                        return [
+                            'success' => true,
+                            'provider' => 'meta_text',
+                            'message' => 'WhatsApp message sent via Meta Cloud Text.',
+                            'data' => $resJson
+                        ];
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning("Meta WhatsApp Text Exception: " . $e->getMessage());
+                }
+            }
+        }
+
+        // ----------------------------------------------------
+        // 2. SECONDARY / FALLBACK: Codebey WhatsApp API
+        // ----------------------------------------------------
+        // 2.A Codebey Template if templateId or templateName provided
+        if (!empty($this->codebeyClientId) && !empty($this->codebeyClientSecret) && (!empty($templateId) || !empty($templateName))) {
+            $codebeyHeaders = [
+                'client-id' => $this->codebeyClientId,
+                'client-secret' => $this->codebeyClientSecret,
+            ];
+
+            $templateIdentifiers = array_unique(array_filter([$templateId, $templateName]));
+            $templateUrl = rtrim($this->codebeyApiUrl, '/') . '/inbox/send-template-message';
+
+            foreach ($templateIdentifiers as $tplId) {
+                try {
+                    $response = Http::withHeaders($codebeyHeaders)
+                        ->timeout(6)
+                        ->asForm()
+                        ->post($templateUrl, [
+                            'mobile_code' => $mobileCode,
+                            'mobile' => $mobileNumber,
+                            'template_id' => $tplId,
+                            'custom_fields' => json_encode(array_values($templateParams)),
+                        ]);
+
+                    $body = $response->json();
+                    Log::info("Codebey Template ({$tplId}) Send to {$fullPhone}: Status {$response->status()}", ['body' => $body]);
+
+                    if ($response->successful() && ($body['status'] ?? '') === 'success') {
+                        return [
+                            'success' => true,
+                            'provider' => 'codebey_template',
+                            'message' => 'WhatsApp message sent via Codebey Template.',
+                            'data' => $body
+                        ];
+                    }
+                    if (isset($body['message'])) {
+                        $lastError = is_array($body['message']) ? implode(' ', $body['message']) : $body['message'];
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning("Codebey Template Send Exception ({$tplId}): " . $e->getMessage());
+                    $lastError = $e->getMessage();
+                }
+            }
+        }
+
+        // 2.B Codebey Direct Message
+        if (!empty($this->codebeyClientId) && !empty($this->codebeyClientSecret) && !empty($textMessage)) {
+            $codebeyHeaders = [
+                'client-id' => $this->codebeyClientId,
+                'client-secret' => $this->codebeyClientSecret,
+            ];
+
+            try {
+                $messageUrl = rtrim($this->codebeyApiUrl, '/') . '/inbox/send-message';
+                $response = Http::withHeaders($codebeyHeaders)
+                    ->timeout(6)
+                    ->asForm()
+                    ->post($messageUrl, [
+                        'mobile_code' => $mobileCode,
+                        'mobile' => $mobileNumber,
+                        'message' => $textMessage
+                    ]);
+
+                $body = $response->json();
+                Log::info("Codebey Direct Message Send to {$fullPhone}: Status {$response->status()}", ['body' => $body]);
+
+                if ($response->successful() && ($body['status'] ?? '') === 'success') {
+                    return [
+                        'success' => true,
+                        'provider' => 'codebey_message',
+                        'message' => 'WhatsApp message sent via Codebey direct message.',
+                        'data' => $body
+                    ];
+                }
+                if (isset($body['message'])) {
+                    $lastError = is_array($body['message']) ? implode(' ', $body['message']) : $body['message'];
+                }
+            } catch (\Throwable $e) {
+                Log::warning("Codebey Direct Message Exception: " . $e->getMessage());
+                $lastError = $e->getMessage();
+            }
+        }
+
+        return [
+            'success' => false,
+            'message' => 'Failed to send WhatsApp message: ' . $lastError,
+            'last_error' => $lastError
+        ];
+    }
 }

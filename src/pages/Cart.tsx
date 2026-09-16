@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { ShoppingCart, Trash2, Tag, Truck, CreditCard, ChevronRight, CheckCircle, Smartphone, Globe, Landmark, MapPin, Plus, X, Loader2 } from 'lucide-react';
+import { ShoppingCart, Trash2, Tag, Truck, CreditCard, ChevronRight, CheckCircle, Smartphone, Globe, Landmark, MapPin, Plus, X, Loader2, Clock } from 'lucide-react';
 
 export const Cart: React.FC = () => {
   const {
@@ -34,14 +34,39 @@ export const Cart: React.FC = () => {
   const [couponError, setCouponError] = useState('');
   const [couponSuccess, setCouponSuccess] = useState(false);
 
+  // Delivery Time Slot State
+  const [selectedDeliverySlot, setSelectedDeliverySlot] = useState<string>('⚡ Express Delivery (30-45 mins)');
+
   // New Address Modal/Toggle State
   const [showAddressForm, setShowAddressForm] = useState(false);
-  const [newAddrName, setNewAddrName] = useState('');
+  const [newAddrName, setNewAddrName] = useState(user?.name || '');
   const [newAddrType, setNewAddrType] = useState<'Home' | 'Work' | 'Other'>('Home');
   const [newAddrLine, setNewAddrLine] = useState('');
-  const [newAddrCity, setNewAddrCity] = useState('');
-  const [newAddrZip, setNewAddrZip] = useState(activePincode || '');
-  const [newAddrPhone, setNewAddrPhone] = useState('');
+  const [newAddrCity, setNewAddrCity] = useState('Kolkata');
+  const [newAddrZip, setNewAddrZip] = useState(activePincode || '700135');
+  const [newAddrPhone, setNewAddrPhone] = useState(user?.phone ? (user.phone.startsWith('+91') ? user.phone : `+91 ${user.phone.trim()}`) : '');
+
+  // Reset coupon since coupon is hidden
+  useEffect(() => {
+    applyCoupon('');
+  }, []);
+
+  // Auto-open address form if customer has no saved address
+  useEffect(() => {
+    if (addresses.length === 0) {
+      setShowAddressForm(true);
+    }
+  }, [addresses.length]);
+
+  // Keep phone/name populated from user
+  useEffect(() => {
+    if (user?.phone && !newAddrPhone) {
+      setNewAddrPhone(user.phone.startsWith('+91') ? user.phone : `+91 ${user.phone.trim()}`);
+    }
+    if (user?.name && !newAddrName) {
+      setNewAddrName(user.name);
+    }
+  }, [user]);
 
   // Coupon apply handler
   const handleApply = (e: React.FormEvent) => {
@@ -390,6 +415,101 @@ export const Cart: React.FC = () => {
                   </div>
                 );
               })}
+              {addresses.length === 0 && !showAddressForm && (
+                <div className="p-4 bg-orange-50/60 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800/50 rounded-xl text-center space-y-2">
+                  <p className="text-xs font-bold text-orange-800 dark:text-orange-300">
+                    📍 No delivery address added yet.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddressForm(true)}
+                    className="px-4 py-1.5 bg-[#fc490f] hover:bg-orange-600 text-white text-xs font-bold rounded-lg shadow-xs transition-all inline-flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Delivery Address</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Section 2.5: Delivery Slot Selector */}
+          <div className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-2xl p-5 space-y-4">
+            <div className="border-b border-gray-50 dark:border-slate-800 pb-3">
+              <h3 className="font-sans font-bold text-gray-900 dark:text-white text-base flex items-center gap-2">
+                <Clock className="w-5 h-5 text-red-500" />
+                <span>Select Delivery Time Slot</span>
+              </h3>
+              <p className="text-[10px] text-gray-400 mt-0.5">
+                Freshly cut & dispatched with hygienic temperature-controlled ice packaging.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {[
+                {
+                  id: '⚡ Express Delivery (30-45 mins)',
+                  title: 'Express Delivery',
+                  time: '30-45 mins',
+                  tag: 'Fastest',
+                  icon: '⚡'
+                },
+                {
+                  id: '🌅 Morning Slot (07:00 AM - 12:00 PM)',
+                  title: 'Morning Slot',
+                  time: '07:00 AM - 12:00 PM',
+                  tag: 'Fresh Catch',
+                  icon: '🌅'
+                },
+                {
+                  id: '🌇 Evening Slot (04:00 PM - 08:30 PM)',
+                  title: 'Evening Slot',
+                  time: '04:00 PM - 08:30 PM',
+                  tag: 'Popular',
+                  icon: '🌇'
+                }
+              ].map(slot => {
+                const isSelected = selectedDeliverySlot === slot.id;
+                return (
+                  <div
+                    key={slot.id}
+                    onClick={() => setSelectedDeliverySlot(slot.id)}
+                    className={`p-3 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                      isSelected
+                        ? 'bg-red-50/40 dark:bg-red-950/25 border-red-500 shadow-xs'
+                        : 'bg-white dark:bg-slate-900 border-gray-100 dark:border-slate-800 hover:border-gray-200'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-base">{slot.icon}</span>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                          isSelected ? 'bg-red-100 dark:bg-red-900/40 text-red-600' : 'bg-gray-100 dark:bg-slate-800 text-gray-500'
+                        }`}>
+                          {slot.tag}
+                        </span>
+                      </div>
+                      <span className="font-extrabold text-xs text-gray-900 dark:text-white block">
+                        {slot.title}
+                      </span>
+                      <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400 block mt-0.5">
+                        {slot.time}
+                      </span>
+                    </div>
+
+                    <div className="mt-2.5 pt-2 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between">
+                      <span className={`text-[10px] font-bold ${isSelected ? 'text-red-600' : 'text-gray-400'}`}>
+                        {isSelected ? '✓ Selected' : 'Select'}
+                      </span>
+                      <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${
+                        isSelected ? 'border-red-500' : 'border-gray-300'
+                      }`}>
+                        {isSelected && <div className="w-1.5 h-1.5 bg-red-500 rounded-full" />}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -405,147 +525,29 @@ export const Cart: React.FC = () => {
               </p>
             </div>
 
-            {/* List of beautiful, responsive payment options */}
+            {/* Cash on Delivery (COD) Only */}
             <div className="space-y-3">
-              
-              {/* Option A: UPI / Instant App */}
-              <div
-                onClick={() => setSelectedPaymentMethod('upi')}
-                className={`p-4 rounded-xl border cursor-pointer transition-all flex items-start gap-3.5 ${
-                  selectedPaymentMethod === 'upi'
-                    ? 'bg-red-50/30 dark:bg-red-950/20 border-red-400'
-                    : 'bg-white dark:bg-slate-900 border-gray-100 dark:border-slate-800'
-                }`}
-              >
-                <div className="p-2 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 rounded-lg">
-                  <Smartphone className="w-5 h-5" />
-                </div>
-                <div className="flex-1 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-gray-800 dark:text-gray-100">
-                      UPI - GooglePay / PhonePe / Paytm
-                    </span>
-                    <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded">
-                      Super Fast
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-gray-400 dark:text-gray-500">
-                    Pay instantly using any UPI app on your mobile device.
-                  </p>
-                  
-                  {/* Collapsible UPI Mock selection inside active payment */}
-                  {selectedPaymentMethod === 'upi' && (
-                    <div className="pt-2.5 grid grid-cols-3 gap-2 animate-fadeIn">
-                      <span className="text-[10px] text-center border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 px-2 py-1 rounded font-bold text-gray-700 dark:text-gray-300">
-                        Google Pay
-                      </span>
-                      <span className="text-[10px] text-center border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 px-2 py-1 rounded font-bold text-gray-700 dark:text-gray-300">
-                        PhonePe
-                      </span>
-                      <span className="text-[10px] text-center border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 px-2 py-1 rounded font-bold text-gray-700 dark:text-gray-300">
-                        Paytm
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Option B: Credit / Debit Card */}
-              <div
-                onClick={() => setSelectedPaymentMethod('card')}
-                className={`p-4 rounded-xl border cursor-pointer transition-all flex items-start gap-3.5 ${
-                  selectedPaymentMethod === 'card'
-                    ? 'bg-red-50/30 dark:bg-red-950/20 border-red-400'
-                    : 'bg-white dark:bg-slate-900 border-gray-100 dark:border-slate-800'
-                }`}
-              >
-                <div className="p-2 bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 rounded-lg">
-                  <CreditCard className="w-5 h-5" />
-                </div>
-                <div className="flex-1 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-gray-800 dark:text-gray-100">
-                      Credit / Debit Card (Visa, MasterCard, RuPay)
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-gray-400 dark:text-gray-500">
-                    Accepts all domestic and international cards with secure authentication.
-                  </p>
-
-                  {/* Collapsible Card Details Form inside active payment */}
-                  {selectedPaymentMethod === 'card' && (
-                    <div className="pt-3 space-y-2 animate-fadeIn max-w-sm">
-                      <div className="space-y-0.5">
-                        <input
-                          type="text"
-                          placeholder="Card Number: 4321 0000 1111 2222"
-                          className="w-full px-2.5 py-1 text-xs bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded text-gray-800 dark:text-white"
-                          disabled
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <input
-                          type="text"
-                          placeholder="Expiry: 12/28"
-                          className="px-2.5 py-1 text-xs bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded text-gray-800 dark:text-white"
-                          disabled
-                        />
-                        <input
-                          type="password"
-                          placeholder="CVV: ***"
-                          className="px-2.5 py-1 text-xs bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded text-gray-800 dark:text-white"
-                          disabled
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Option C: Net Banking */}
-              <div
-                onClick={() => setSelectedPaymentMethod('netbanking')}
-                className={`p-4 rounded-xl border cursor-pointer transition-all flex items-start gap-3.5 ${
-                  selectedPaymentMethod === 'netbanking'
-                    ? 'bg-red-50/30 dark:bg-red-950/20 border-red-400'
-                    : 'bg-white dark:bg-slate-900 border-gray-100 dark:border-slate-800'
-                }`}
-              >
-                <div className="p-2 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 rounded-lg">
-                  <Landmark className="w-5 h-5" />
-                </div>
-                <div className="flex-1 space-y-1">
-                  <span className="font-bold text-xs text-gray-800 dark:text-gray-100 block">
-                    Internet Net Banking
-                  </span>
-                  <p className="text-[10px] text-gray-400 dark:text-gray-500">
-                    Instantly transfer securely from your registered bank.
-                  </p>
-                </div>
-              </div>
-
-              {/* Option D: Cash on Delivery (COD) */}
               <div
                 onClick={() => setSelectedPaymentMethod('cod')}
-                className={`p-4 rounded-xl border cursor-pointer transition-all flex items-start gap-3.5 ${
-                  selectedPaymentMethod === 'cod'
-                    ? 'bg-red-50/30 dark:bg-red-950/20 border-red-400'
-                    : 'bg-white dark:bg-slate-900 border-gray-100 dark:border-slate-800'
-                }`}
+                className="p-4 rounded-xl border border-red-400 bg-red-50/30 dark:bg-red-950/20 cursor-pointer transition-all flex items-start gap-3.5"
               >
                 <div className="p-2 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-lg">
                   <CheckCircle className="w-5 h-5" />
                 </div>
                 <div className="flex-1 space-y-1">
-                  <span className="font-bold text-xs text-gray-800 dark:text-gray-100 block">
-                    Cash / UPI on Home Delivery
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-gray-800 dark:text-gray-100 block">
+                      Cash / UPI on Home Delivery
+                    </span>
+                    <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">
+                      Selected
+                    </span>
+                  </div>
                   <p className="text-[10px] text-gray-400 dark:text-gray-500">
                     Pay with Cash, GooglePay, PhonePe, or cards at your doorstep.
                   </p>
                 </div>
               </div>
-
             </div>
           </div>
 
@@ -554,7 +556,8 @@ export const Cart: React.FC = () => {
         {/* Right Hand: Billing Breakdowns, Coupon Apply Code, Final Checkout Action */}
         <div className="lg:col-span-5 space-y-6">
           
-          {/* Section 4: Discount Coupon Field */}
+          {/* Section 4: Discount Coupon Field (Temporarily Hidden) */}
+          {/*
           <div className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-2xl p-5 space-y-4">
             <h3 className="font-sans font-bold text-gray-900 dark:text-white text-sm flex items-center gap-1.5">
               <Tag className="w-4 h-4 text-red-500" />
@@ -580,7 +583,6 @@ export const Cart: React.FC = () => {
               </button>
             </form>
 
-            {/* Error or Success feedback */}
             {couponError && (
               <p className="text-[10px] font-bold text-red-600 dark:text-red-400">
                 {couponError}
@@ -595,7 +597,7 @@ export const Cart: React.FC = () => {
                   onClick={() => {
                     setCouponInput('');
                     setCouponSuccess(false);
-                    applyCoupon(''); // resets context code
+                    applyCoupon('');
                   }}
                   className="font-extrabold underline"
                 >
@@ -604,7 +606,6 @@ export const Cart: React.FC = () => {
               </div>
             )}
 
-            {/* Micro suggestions helper */}
             <div className="pt-2 border-t border-gray-50 dark:border-slate-800/40 space-y-2">
               <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wider">
                 Available Offers for You:
@@ -647,6 +648,7 @@ export const Cart: React.FC = () => {
               </div>
             </div>
           </div>
+          */}
 
           {/* Section 5: Billing Details */}
           <div className="bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-2xl p-5 space-y-4">
@@ -716,10 +718,12 @@ export const Cart: React.FC = () => {
             </div>
 
             {/* Delivery location short indicator */}
-            <div className="bg-gray-50 dark:bg-slate-800/30 p-3 rounded-xl border border-gray-100 dark:border-slate-800 flex gap-2.5 items-start text-xs">
-              <Truck className="w-4.5 h-4.5 text-gray-400 mt-0.5 shrink-0" />
+            <div className="bg-orange-50/60 dark:bg-slate-800/50 p-3 rounded-xl border border-orange-200/70 dark:border-slate-700 flex gap-2.5 items-start text-xs">
+              <Clock className="w-4.5 h-4.5 text-[#fc490f] mt-0.5 shrink-0" />
               <div>
-                <span className="font-bold text-gray-800 dark:text-gray-100 block">Deliver in 45-60 minutes</span>
+                <span className="font-bold text-gray-900 dark:text-white block">
+                  Delivery Slot: {selectedDeliverySlot}
+                </span>
                 <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">
                   To the selected destination address. Sanitized temperature controlled dispatch.
                 </p>
@@ -728,7 +732,7 @@ export const Cart: React.FC = () => {
 
             {/* Main Action Trigger */}
             <button
-              onClick={placeOrder}
+              onClick={() => placeOrder(selectedDeliverySlot)}
               disabled={isPlacingOrder || (cartSubtotal < minOrderAmount && minOrderAmount > 0)}
               className={`w-full text-white font-extrabold text-sm py-3.5 rounded-xl transition-all shadow-xl flex items-center justify-center gap-2 ${
                 isPlacingOrder

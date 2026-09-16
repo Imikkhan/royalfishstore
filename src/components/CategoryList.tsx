@@ -20,7 +20,9 @@ export const TopCategoryTabs: React.FC = () => {
   };
 
   // Dynamically filter Main Categories (parent_id === null or undefined or 0)
-  const mainCategories = categories.filter(cat => !cat.parent_id || cat.parent_id === null || cat.parent_id === 0);
+  const mainCategories = categories
+    .filter(cat => !cat.parent_id || cat.parent_id === null || cat.parent_id === 0)
+    .sort((a, b) => ((Number(a.sort_order) || 0) - (Number(b.sort_order) || 0)) || ((Number(a.id) || 0) - (Number(b.id) || 0)));
 
   const getCategoryIcon = (cat: any) => {
     if (cat.icon) return cat.icon;
@@ -82,7 +84,9 @@ export const CategoryList: React.FC = () => {
   const { selectedSubCategory, setSelectedCategory, setSelectedSubCategory, navigateTo, categories, isLoadingCategories } = useApp();
 
   // Dynamically filter Sub Categories (parent_id is set)
-  const subCategories = categories.filter(cat => cat.parent_id !== null && cat.parent_id !== undefined && cat.parent_id !== 0);
+  const subCategories = categories
+    .filter(cat => cat.parent_id !== null && cat.parent_id !== undefined && cat.parent_id !== 0)
+    .sort((a, b) => ((Number(a.sort_order) || 0) - (Number(b.sort_order) || 0)) || ((Number(a.id) || 0) - (Number(b.id) || 0)));
 
   const handleSubCategoryClick = (subCat: any) => {
     // Find parent category to set selectedCategory properly
