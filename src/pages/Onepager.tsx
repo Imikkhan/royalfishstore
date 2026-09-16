@@ -88,6 +88,12 @@ export const Onepager: React.FC = () => {
   const [faqsData, setFaqsData] = useState<{ title?: string; subtitle?: string; items?: OnepagerFaqItem[] } | null>(null);
   const [isLoadingSections, setIsLoadingSections] = useState(true);
 
+  // Active WhatsApp and Phone Number (8444844440)
+  const whatsappNum = (heroData?.whatsapp_number && !heroData.whatsapp_number.includes('9876543210')) 
+    ? heroData.whatsapp_number.replace(/\D/g, '') 
+    : '918444844440';
+  const cleanPhoneNum = whatsappNum.startsWith('91') ? whatsappNum.slice(2) : whatsappNum;
+
   // Navigate to corresponding category page when clicking "View All"
   const handleViewAllClick = (e: React.MouseEvent, sec: OnepagerCustomSection) => {
     e.preventDefault();
@@ -618,7 +624,7 @@ export const Onepager: React.FC = () => {
                             )}
 
                             <a
-                              href={`https://wa.me/919876543210?text=Hi%20Royal%20Fish%20Store%2C%20আমি%20${encodeURIComponent(p.name)}%20${quantity > 0 ? `(${quantity} প্যাক)` : ''}%20অর্ডার%20করতে%20চাই।`}
+                              href={`https://wa.me/${whatsappNum}?text=Hi%20Royal%20Fish%20Store%2C%20আমি%20${encodeURIComponent(p.name)}%20${quantity > 0 ? `(${quantity} প্যাক)` : ''}%20অর্ডার%20করতে%20চাই।`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="w-full py-1.5 px-2 rounded-xl text-[11px] font-bold bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-2xs"
@@ -773,7 +779,7 @@ export const Onepager: React.FC = () => {
 
           <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0 w-full md:w-auto">
             <a
-              href="https://wa.me/919876543210?text=Hi%20Royal%20Fish%20Store%2C%20I%20need%20Wholesale%2FB2B%20Pricing%20for%20Bulk%20Fish%20and%20Meat."
+              href={`https://wa.me/${whatsappNum}?text=Hi%20Royal%20Fish%20Store%2C%20I%20need%20Wholesale%2FB2B%20Pricing%20for%20Bulk%20Fish%20and%20Meat.`}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full sm:w-auto px-5 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl flex items-center justify-center gap-2 text-xs transition-all"
@@ -782,7 +788,7 @@ export const Onepager: React.FC = () => {
               <span>Get Wholesale Price List</span>
             </a>
             <a
-              href="tel:+919876543210"
+              href={`tel:+91${cleanPhoneNum}`}
               className="w-full sm:w-auto px-5 py-3 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl flex items-center justify-center gap-2 text-xs transition-all border border-white/20"
             >
               <Phone className="w-4 h-4" />
@@ -877,7 +883,7 @@ export const Onepager: React.FC = () => {
           {/* Action Buttons: Full width on mobile, sleek inline buttons on desktop */}
           <div className="flex items-center gap-2 sm:gap-3 w-full md:w-auto">
             <a
-              href="https://wa.me/919876543210?text=Hi%20Royal%20Fish%20Store%2C%20আমি%20আজকের%20স্পেশাল%20পদ্মার%20ইলিশ%20অর্ডার%20করতে%20চাই।"
+              href={`https://wa.me/${whatsappNum}?text=Hi%20Royal%20Fish%20Store%2C%20আমি%20আজকের%20স্পেশাল%20পদ্মার%20ইলিশ%20অর্ডার%20করতে%20চাই।`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1 md:flex-initial px-3 sm:px-7 py-2.5 sm:py-3 bg-[#25D366] hover:bg-[#20ba59] active:scale-95 text-white font-extrabold text-xs sm:text-sm rounded-xl sm:rounded-2xl shadow-md shadow-emerald-500/20 flex items-center justify-center gap-1.5 sm:gap-2 transition-all whitespace-nowrap"

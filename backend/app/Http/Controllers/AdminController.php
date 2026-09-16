@@ -1224,12 +1224,16 @@ class AdminController extends Controller
             'price_box_2_unit' => '/পিস',
             'btn_order_text' => '🐟 এখনই অর্ডার করুন',
             'btn_whatsapp_text' => 'WhatsApp-এ কথা বলুন',
-            'whatsapp_number' => '919876543210',
+            'whatsapp_number' => '918444844440',
             'whatsapp_msg' => 'Hi Royal Fish Store, আমি আজকের স্পেশাল পদ্মার ইলিশ অর্ডার করতে চাই।',
             'hero_image' => '/hilsa_hero.png',
             'delivery_badge' => '২৪ ঘণ্টার মধ্যে আপনার দরজায় Delivery',
             'fresh_badge' => '100% FRESH'
         ];
+
+        if (empty($hero['whatsapp_number']) || str_contains($hero['whatsapp_number'], '9876543210')) {
+            $hero['whatsapp_number'] = '918444844440';
+        }
 
         // 3. Customer Reviews Section
         $reviewsSetting = Setting::where('key', 'onepager_reviews')->first();
