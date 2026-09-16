@@ -104,28 +104,28 @@ export const Home: React.FC = () => {
 
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
             <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white/20 flex items-center justify-center text-xl sm:text-2xl shrink-0 backdrop-blur-xs group-hover:scale-110 transition-transform">
-              🐟
+              🔥
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="bg-amber-300 text-slate-950 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
-                  🔥 আজকের স্পেশাল
+                  TODAY&apos;S SPECIAL
                 </span>
                 <span className="text-[10px] text-amber-100 font-bold">
-                  কুপন: <strong className="text-white">ROYAL20</strong>
+                  Use Code: <strong className="text-white font-black">ROYAL20</strong>
                 </span>
               </div>
               <h4 className="text-xs sm:text-sm font-black text-white mt-1 leading-snug line-clamp-1 sm:line-clamp-none">
-                পদ্মার তাজা ইলিশ ও স্পেশাল সিফুড অফার
+                Flat 20% OFF on Fresh Catch &amp; Seafood Deals!
               </h4>
               <p className="text-[10px] sm:text-[11px] text-orange-100 font-medium hidden xs:block truncate mt-0.5">
-                ১০০% ফরমালিনমুক্ত ফ্রেশ মাছ ঘরে বসেই ডেলিভারি নিন
+                Premium cut Padma Hilsa &amp; daily catches delivered fresh.
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-1 text-[11px] sm:text-xs font-black bg-white text-[#fc490f] px-3 sm:px-3.5 py-2 rounded-xl shrink-0 group-hover:bg-amber-300 group-hover:text-slate-950 transition-colors shadow-xs active:scale-95 whitespace-nowrap">
-            <span>অফার দেখুন</span>
+            <span>View Offers</span>
             <ArrowRight className="w-3.5 h-3.5 stroke-[3]" />
           </div>
         </div>
