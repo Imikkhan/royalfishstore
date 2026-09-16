@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import { ShoppingCart, Trash2, Tag, Truck, CreditCard, ChevronRight, CheckCircle, Smartphone, Globe, Landmark, MapPin, Plus, X, Loader2, Clock } from 'lucide-react';
 
@@ -34,8 +34,63 @@ export const Cart: React.FC = () => {
   const [couponError, setCouponError] = useState('');
   const [couponSuccess, setCouponSuccess] = useState(false);
 
-  // Delivery Time Slot State
-  const [selectedDeliverySlot, setSelectedDeliverySlot] = useState<string>('⚡ Express Delivery (30-45 mins)');
+  // Derive Delivery Time Slots directly from the products in Cart
+  const availableDeliverySlots = useMemo(() => {
+    const rawSlots = Array.from(
+      new Set(
+        cart
+          .map(item => (item.product.deliveryTime || item.product.delivery_time)?.trim())
+          .filter((slot): slot is string => Boolean(slot))
+      )
+    );
+
+    if (rawSlots.length > 0) {
+      return rawSlots.map(slotText => {
+        const lower = slotText.toLowerCase();
+        const isMorning = lower.includes('morning') || lower.includes('07:00') || lower.includes('7:00');
+        const isEvening = lower.includes('evening') || lower.includes('4:00') || lower.includes('04:00') || lower.includes('08:30') || lower.includes('8:30');
+
+        return {
+          id: slotText,
+          title: isMorning ? 'Morning Slot' : isEvening ? 'Evening Slot' : 'Delivery Slot',
+          time: slotText,
+          tag: isMorning ? 'Fresh Catch' : isEvening ? 'Popular' : 'Scheduled',
+          icon: isMorning ? '🌅' : isEvening ? '🌆' : '🚚'
+        };
+      });
+    }
+
+    return [
+      {
+        id: 'Today 4:00pm - 08:30 pm',
+        title: 'Evening Slot',
+        time: 'Today 4:00pm - 08:30 pm',
+        tag: 'Popular',
+        icon: '🌆'
+      },
+      {
+        id: 'Today 07:00 am - 12:00 pm',
+        title: 'Morning Slot',
+        time: 'Today 07:00 am - 12:00 pm',
+        tag: 'Fresh Catch',
+        icon: '🌅'
+      }
+    ];
+  }, [cart]);
+
+  // Delivery Time Slot State - auto-selects product's delivery slot
+  const [selectedDeliverySlot, setSelectedDeliverySlot] = useState<string>(() => {
+    return availableDeliverySlots[0]?.id || 'Today 4:00pm - 08:30 pm';
+  });
+
+  // Keep selectedDeliverySlot updated when cart products change
+  useEffect(() => {
+    if (availableDeliverySlots.length > 0) {
+      if (!selectedDeliverySlot || !availableDeliverySlots.some(s => s.id === selectedDeliverySlot)) {
+        setSelectedDeliverySlot(availableDeliverySlots[0].id);
+      }
+    }
+  }, [availableDeliverySlots, selectedDeliverySlot]);
 
   // New Address Modal/Toggle State
   const [showAddressForm, setShowAddressForm] = useState(false);
@@ -441,70 +496,48 @@ export const Cart: React.FC = () => {
                 <span>Select Delivery Time Slot</span>
               </h3>
               <p className="text-[10px] text-gray-400 mt-0.5">
-                Freshly cut & dispatched with hygienic temperature-controlled ice packaging.
+                Matched directly with the delivery schedule of your selected fresh items.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {[
-                {
-                  id: '⚡ Express Delivery (30-45 mins)',
-                  title: 'Express Delivery',
-                  time: '30-45 mins',
-                  tag: 'Fastest',
-                  icon: '⚡'
-                },
-                {
-                  id: '🌅 Morning Slot (07:00 AM - 12:00 PM)',
-                  title: 'Morning Slot',
-                  time: '07:00 AM - 12:00 PM',
-                  tag: 'Fresh Catch',
-                  icon: '🌅'
-                },
-                {
-                  id: '🌇 Evening Slot (04:00 PM - 08:30 PM)',
-                  title: 'Evening Slot',
-                  time: '04:00 PM - 08:30 PM',
-                  tag: 'Popular',
-                  icon: '🌇'
-                }
-              ].map(slot => {
+            <div className={`grid grid-cols-1 ${availableDeliverySlots.length > 1 ? 'sm:grid-cols-2' : 'sm:grid-cols-1'} gap-3`}>
+              {availableDeliverySlots.map(slot => {
                 const isSelected = selectedDeliverySlot === slot.id;
                 return (
                   <div
                     key={slot.id}
                     onClick={() => setSelectedDeliverySlot(slot.id)}
-                    className={`p-3 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                    className={`p-3.5 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
                       isSelected
                         ? 'bg-red-50/40 dark:bg-red-950/25 border-red-500 shadow-xs'
                         : 'bg-white dark:bg-slate-900 border-gray-100 dark:border-slate-800 hover:border-gray-200'
                     }`}
                   >
                     <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-base">{slot.icon}</span>
-                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xl">{slot.icon}</span>
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded ${
                           isSelected ? 'bg-red-100 dark:bg-red-900/40 text-red-600' : 'bg-gray-100 dark:bg-slate-800 text-gray-500'
                         }`}>
                           {slot.tag}
                         </span>
                       </div>
-                      <span className="font-extrabold text-xs text-gray-900 dark:text-white block">
+                      <span className="font-extrabold text-sm text-gray-900 dark:text-white block">
                         {slot.title}
                       </span>
-                      <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400 block mt-0.5">
+                      <span className="text-xs font-bold text-[#fc490f] dark:text-orange-400 block mt-1">
                         {slot.time}
                       </span>
                     </div>
 
-                    <div className="mt-2.5 pt-2 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between">
+                    <div className="mt-3 pt-2.5 border-t border-gray-100 dark:border-slate-800 flex items-center justify-between">
                       <span className={`text-[10px] font-bold ${isSelected ? 'text-red-600' : 'text-gray-400'}`}>
                         {isSelected ? '✓ Selected' : 'Select'}
                       </span>
-                      <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
                         isSelected ? 'border-red-500' : 'border-gray-300'
                       }`}>
-                        {isSelected && <div className="w-1.5 h-1.5 bg-red-500 rounded-full" />}
+                        {isSelected && <div className="w-2 h-2 bg-red-500 rounded-full" />}
                       </div>
                     </div>
                   </div>
