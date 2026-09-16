@@ -30,6 +30,12 @@ class AdminController extends Controller
      */
     public function showLogin()
     {
+        if (Auth::check()) {
+            $user = Auth::user();
+            if ($user->role === 'admin' || $user->hasPermission('dashboard') || $user->role === 'manager') {
+                return redirect('/admin/dashboard');
+            }
+        }
         return view('admin.login');
     }
 

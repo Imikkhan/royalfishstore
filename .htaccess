@@ -6,23 +6,16 @@
     RewriteRule ^backend/\.env - [F,L]
     RewriteRule ^backend/(app|bootstrap|config|database|resources|routes|storage|tests|vendor) - [F,L]
 
-    # 2. Admin, Rider & API Routing: Pass /admin, /rider and /api requests to Laravel
-    RewriteCond %{REQUEST_URI} ^/admin [NC,OR]
-    RewriteCond %{REQUEST_URI} ^/rider [NC,OR]
-    RewriteCond %{REQUEST_URI} ^/api [NC,OR]
-    RewriteCond %{REQUEST_URI} ^/run-storage-link [NC,OR]
-    RewriteCond %{REQUEST_URI} ^/clear-cache [NC]
-    RewriteRule ^(.*)$ backend/public/$1 [L,QSA]
-
-    # 3. Uploaded Files: Route /uploads to backend/public/uploads
-    RewriteCond %{REQUEST_URI} ^/uploads/ [NC]
+    # 2. Uploaded Media Files: Route /uploads directly to backend/public/uploads
     RewriteRule ^uploads/(.*)$ backend/public/uploads/$1 [L]
 
-    # 4. Uploaded Storage Files: Route /storage to backend storage
-    RewriteCond %{REQUEST_URI} ^/storage/ [NC]
+    # 3. Uploaded Storage Files: Route /storage directly to backend/storage/app/public
     RewriteRule ^storage/(.*)$ backend/storage/app/public/$1 [L]
 
-    # 5. React SPA Router: Direct all other URLs (customer website) to index.html
+    # 4. Admin, Rider, API & Utilities: Route directly to Laravel Front Controller (index.php)
+    RewriteRule ^(admin|rider|api|run-storage-link|clear-cache)(/.*)?$ backend/public/index.php [L,QSA]
+
+    # 5. React SPA Router: Direct all other non-existing files to index.html
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ index.html [L]

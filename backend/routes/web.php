@@ -11,13 +11,16 @@ Route::get('/', function () {
 // Admin Panel Group
 Route::prefix('admin')->group(function () {
     
-    // Guest authentication routes
-    Route::middleware('guest')->group(function () {
-        Route::get('/login', [AdminController::class, 'showLogin'])->name('login');
-        Route::post('/login', [AdminController::class, 'login']);
-        Route::post('/send-otp', [AdminController::class, 'sendOtp']);
-        Route::post('/verify-otp', [AdminController::class, 'verifyOtp']);
+    // Redirect /admin to /admin/login or /admin/dashboard
+    Route::get('/', function () {
+        return Auth::check() ? redirect('/admin/dashboard') : redirect('/admin/login');
     });
+
+    // Authentication routes
+    Route::get('/login', [AdminController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AdminController::class, 'login']);
+    Route::post('/send-otp', [AdminController::class, 'sendOtp']);
+    Route::post('/verify-otp', [AdminController::class, 'verifyOtp']);
 
     // Authenticated admin routes
     Route::middleware('auth')->group(function () {
