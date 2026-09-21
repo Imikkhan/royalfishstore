@@ -71,6 +71,7 @@ export interface Address {
   name: string;
   type: 'Home' | 'Work' | 'Other';
   addressLine: string;
+  landmark?: string;
   city: string;
   zipCode: string;
   phone: string;

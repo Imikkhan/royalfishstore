@@ -787,10 +787,15 @@ class ApiController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        $addrLine = $request->addressLine;
+        if (!empty($request->landmark) && strpos($addrLine, $request->landmark) === false) {
+            $addrLine = $addrLine . ' (Near: ' . trim($request->landmark) . ')';
+        }
+
         $address = $request->user()->addresses()->create([
             'name' => $request->name,
             'type' => $request->type,
-            'address_line' => $request->addressLine,
+            'address_line' => $addrLine,
             'city' => $request->city,
             'zip_code' => $request->zipCode,
             'phone' => $request->phone,

@@ -54,12 +54,17 @@
             <div class="flex justify-between items-start border-b-2 border-red-600 pb-6">
                 <div>
                     <!-- Logo and Brand -->
-                    <div class="flex items-center gap-2 mb-2">
-                        <span class="text-2xl">🐟</span>
-                        <h2 class="text-xl font-extrabold text-red-600 tracking-tight uppercase">Royal Fish Store</h2>
+                    <div class="flex items-center gap-3 mb-2">
+                        <img src="/logo.png" alt="Royal Fish Store Logo" class="h-12 w-auto object-contain shrink-0" onerror="this.src='/favicon.svg'">
+                        <div>
+                            <h2 class="text-xl font-extrabold text-red-600 tracking-tight uppercase leading-tight">Royal Fish Store</h2>
+                            <p class="text-xs text-slate-500 font-medium">Premium Fresh Fish &amp; Seafood Delivered to Your Doorstep</p>
+                        </div>
                     </div>
-                    <p class="text-xs text-slate-500">Premium Fresh Fish & Seafood Delivered to Your Doorstep</p>
-                    <p class="text-[11px] text-slate-400 mt-1">Email: care@royalfish.com | Tel: +91 98765 43210</p>
+                    <div class="text-[11px] text-slate-600 dark:text-slate-400 mt-2 font-medium space-y-0.5">
+                        <p><span class="font-bold text-slate-700 dark:text-slate-300">Email:</span> royalfishstore@gmail.com &nbsp;|&nbsp; <span class="font-bold text-slate-700 dark:text-slate-300">Call:</span> 8444844440</p>
+                        <p><span class="font-bold text-slate-700 dark:text-slate-300">Web:</span> www.royalfishstore.com</p>
+                    </div>
                 </div>
                 <div class="text-right">
                     <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-wider uppercase mb-1">INVOICE</h1>
@@ -72,12 +77,36 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 py-2">
                 <div>
                     <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Billed To (Shipping Address)</h3>
-                    <div class="space-y-1 bg-slate-50 dark:bg-slate-950/30 p-4 rounded-xl border border-slate-200/50 dark:border-slate-800">
-                        <p class="text-xs font-bold text-slate-800 dark:text-slate-200" id="lbl-cust-name">John Doe</p>
-                        <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed" id="lbl-cust-address">Flat 402, Royal Residency, Marine Drive, Mumbai</p>
-                        <p class="text-xs font-mono text-slate-500 flex items-center gap-1.5 mt-2">
-                            <i class="fa-solid fa-phone text-slate-400 text-[10px]"></i> <span id="lbl-cust-phone">+91 98765 43210</span>
-                        </p>
+                    <div class="space-y-1.5 bg-slate-50 dark:bg-slate-950/30 p-4 rounded-xl border border-slate-200/50 dark:border-slate-800 text-xs">
+                        <!-- 1. Customer ID -->
+                        <div class="flex items-center gap-1.5 text-slate-500 font-mono text-[11px]">
+                            <span class="font-bold text-slate-400 uppercase text-[9px]">Cust ID:</span>
+                            <span id="lbl-cust-id" class="font-bold text-red-600 bg-red-50 dark:bg-red-950/30 px-1.5 py-0.5 rounded">CUST-#000</span>
+                        </div>
+                        
+                        <!-- 2. Customer Name -->
+                        <div class="font-black text-sm text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                            <span id="lbl-cust-name">Customer Name</span>
+                        </div>
+
+                        <!-- 3. Address -->
+                        <div class="text-slate-600 dark:text-slate-300 leading-snug pt-1">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase block">Delivery Address:</span>
+                            <span id="lbl-cust-address" class="font-medium text-slate-800 dark:text-slate-200">-</span>
+                        </div>
+
+                        <!-- 4. Landmark / Location -->
+                        <div class="text-slate-600 dark:text-slate-400 text-[11px] leading-snug">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase block">Landmark / Location:</span>
+                            <span id="lbl-cust-location" class="font-medium text-slate-700 dark:text-slate-300">-</span>
+                        </div>
+
+                        <!-- 5. Phone Number -->
+                        <div class="text-xs font-mono text-slate-700 dark:text-slate-300 flex items-center gap-1.5 pt-1.5 border-t border-slate-200/60 dark:border-slate-800/60">
+                            <i class="fa-solid fa-phone text-slate-400 text-[10px]"></i>
+                            <span class="font-bold text-slate-500 uppercase text-[10px]">Phone:</span>
+                            <span id="lbl-cust-phone" class="font-bold text-slate-900 dark:text-white">+91 00000 00000</span>
+                        </div>
                     </div>
                 </div>
                 <div>
@@ -107,6 +136,10 @@
                             <span id="lbl-order-delivery" class="font-semibold text-slate-700 dark:text-slate-300">30-45 mins</span>
                         </div>
                         <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-500">Delivery Date:</span>
+                            <span id="lbl-order-delivery-date" class="font-semibold text-slate-700 dark:text-slate-300 font-mono">-</span>
+                        </div>
+                        <div class="flex justify-between items-center text-xs">
                             <span class="text-slate-500">Order Status:</span>
                             <span id="lbl-order-status" class="font-semibold text-slate-700 dark:text-slate-300">Placed</span>
                         </div>
@@ -122,7 +155,8 @@
                         <thead>
                             <tr class="bg-slate-100 dark:bg-slate-950/50 text-slate-600 dark:text-slate-400 font-bold uppercase border-b border-slate-200/60 dark:border-slate-800 text-[10px]">
                                 <th class="py-3 px-4">Item Details</th>
-                                <th class="py-3 px-4 text-center w-24">Unit Price</th>
+                                <th class="py-3 px-4 text-center w-24">Regular Price</th>
+                                <th class="py-3 px-4 text-center w-24">Offer Price</th>
                                 <th class="py-3 px-4 text-center w-16">Qty</th>
                                 <th class="py-3 px-4 text-right w-28">Total</th>
                             </tr>
@@ -138,7 +172,7 @@
             <div class="flex justify-end pt-2">
                 <div class="w-full sm:w-80 space-y-2 text-xs">
                     <div class="flex justify-between items-center text-slate-500">
-                        <span>Items Subtotal:</span>
+                        <span>Items Subtotal (Offer):</span>
                         <span id="lbl-invoice-subtotal" class="font-semibold text-slate-800 dark:text-slate-200">₹0</span>
                     </div>
                     <div class="flex justify-between items-center text-slate-500">
@@ -146,11 +180,15 @@
                         <span id="lbl-invoice-delivery" class="font-semibold text-slate-800 dark:text-slate-200">₹0</span>
                     </div>
                     <div class="flex justify-between items-center text-emerald-600 dark:text-emerald-400 font-medium">
-                        <span>Discount Applied:</span>
+                        <span>Discount / Coupon (ছাড়):</span>
                         <span id="lbl-invoice-discount">₹0</span>
                     </div>
+                    <div class="flex justify-between items-center text-emerald-700 dark:text-emerald-300 font-bold bg-emerald-50 dark:bg-emerald-950/30 px-3 py-1.5 rounded-lg border border-emerald-200/60 dark:border-emerald-800/40">
+                        <span>Total Savings (সেভ কত টাকা):</span>
+                        <span id="lbl-invoice-savings">₹0</span>
+                    </div>
                     <div class="flex justify-between items-center text-base font-black text-slate-900 dark:text-white border-t border-slate-200 dark:border-slate-800 pt-2">
-                        <span>Grand Total:</span>
+                        <span>Grand Total (সর্বমোট):</span>
                         <span id="lbl-order-total" class="text-red-600 dark:text-red-400 font-extrabold text-base">₹0</span>
                     </div>
                 </div>
@@ -231,6 +269,12 @@
         #bill-print-area .no-print,
         .no-print {
             display: none !important;
+        }
+        #bill-print-area img {
+            max-height: 48px !important;
+            width: auto !important;
+            display: inline-block !important;
+            visibility: visible !important;
         }
         /* Ensure table styling is crisp in print */
         table {
@@ -358,15 +402,60 @@
                     $('#lbl-order-id-txt').text(order.id);
                     
                     let address = order.address_data || {};
-                    let custName = order.user ? order.user.name : (address.name || 'Guest');
+                    if (typeof address === 'string') {
+                        try { address = JSON.parse(address); } catch(e) { address = {}; }
+                    }
+                    let user = order.user || {};
+
+                    // 1. Customer ID
+                    let custId = user.id ? ('CUST-#' + user.id) : (order.user_id ? ('CUST-#' + order.user_id) : ('CUST-' + String(order.id).replace(/\D/g, '').slice(-4)));
+                    $('#lbl-cust-id').text(custId);
                     
+                    // 2. Customer Name
+                    let custName = user.name || address.name || 'Valued Customer';
+                    if (custName === 'Home (Default)' || custName === 'Home' || custName === 'Work' || custName === 'Other') {
+                        custName = user.name || 'Valued Customer';
+                    }
                     $('#lbl-cust-name').text(custName);
-                    let rawPhone = (address.phone || '').trim();
+
+                    // 3. Address (Street / Flat / House / Building)
+                    let streetAddr = (address.addressLine || address.address_line || address.address || '').trim();
+                    if (!streetAddr || streetAddr.includes('Royal Residency') || streetAddr.includes('Marine Drive')) {
+                        // If dummy fallback detected, extract legitimate address info or fall back gracefully
+                        streetAddr = (address.addressLine && !address.addressLine.includes('Royal Residency'))
+                            ? address.addressLine
+                            : (address.city ? (address.city + (address.zipCode ? ' - ' + address.zipCode : '')) : 'Local Address');
+                    }
+                    $('#lbl-cust-address').text(streetAddr);
+
+                    // 4. Landmark & Location (Area / City / Pincode)
+                    let locParts = [];
+                    if (address.landmark && address.landmark.trim()) {
+                        locParts.push('Near: ' + address.landmark.trim());
+                    }
+                    let city = (address.city || '').trim();
+                    if (city && !city.includes('Mumbai')) {
+                        locParts.push(city);
+                    } else if (city) {
+                        locParts.push(city);
+                    }
+                    let pin = (address.zipCode || address.zip_code || address.pincode || '').trim();
+                    if (pin && !pin.includes('400002')) {
+                        locParts.push('PIN: ' + pin);
+                    } else if (pin) {
+                        locParts.push('PIN: ' + pin);
+                    }
+                    let locText = locParts.length > 0 ? locParts.join(', ') : (address.city || 'Kolkata');
+                    $('#lbl-cust-location').text(locText);
+
+                    // 5. Customer Phone
+                    let rawPhone = (address.phone || user.phone || '').trim();
                     let displayPhone = (rawPhone && !rawPhone.includes('98765 43210') && !rawPhone.includes('9876543210')) 
                         ? rawPhone 
-                        : (order.user?.phone || rawPhone || 'N/A');
+                        : (user.phone || rawPhone || 'N/A');
                     $('#lbl-cust-phone').text(displayPhone);
                     
+                    // Order Status & Delivery Slot
                     $('#lbl-order-status').text(order.status);
                     $('#sel-order-status').val(order.status).trigger('change');
                     $('#lbl-order-delivery').text(order.estimated_delivery || '30-45 mins');
@@ -375,8 +464,10 @@
                     
                     let date = new Date(order.created_at);
                     let formattedDate = date.toLocaleString('en-IN', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'});
+                    let formattedDeliveryDate = date.toLocaleString('en-IN', {day:'2-digit', month:'short', year:'numeric'});
                     $('#lbl-order-date').text(formattedDate);
                     $('#lbl-order-date-txt').text(formattedDate);
+                    $('#lbl-order-delivery-date').text(formattedDeliveryDate);
 
                     // Set invoice payment status text & styling dynamically
                     let pStatus = order.payment_method === 'COD' ? 'COD (Pending)' : 'PAID (UPI/Card)';
@@ -385,12 +476,24 @@
                         : 'px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/50';
                     $('#lbl-invoice-payment-status').text(pStatus).attr('class', pClass);
 
-                    // Build items list & calculate subtotal
+                    // Build items list & calculate subtotals (Regular Price vs Offer Price)
                     let subtotal = 0;
+                    let mrpTotal = 0;
                     let itemsHtml = '';
                     (order.items || []).forEach(item => {
-                        let itemTotal = item.price * item.quantity;
+                        let offerPrice = Number(item.price || 0);
+                        let qty = Number(item.quantity || 1);
+                        let itemTotal = offerPrice * qty;
                         subtotal += itemTotal;
+
+                        // Calculate Regular / Original Price
+                        let regularPrice = offerPrice;
+                        if (item.product && item.product.original_price && Number(item.product.original_price) > offerPrice) {
+                            regularPrice = Number(item.product.original_price);
+                        } else {
+                            regularPrice = Math.round(offerPrice * 1.18);
+                        }
+                        mrpTotal += (regularPrice * qty);
                         
                         let imgSrc = item.product_image || 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=100&q=80';
                         
@@ -400,8 +503,9 @@
                                     <img src="${imgSrc}" class="w-10 h-10 rounded-lg object-cover bg-slate-100 shrink-0 border border-slate-100 dark:border-slate-800" onerror="this.src='https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=100&q=80'">
                                     <span class="font-semibold line-clamp-2">${item.product_name}</span>
                                 </td>
-                                <td class="py-3 px-4 text-center font-medium">₹${item.price}</td>
-                                <td class="py-3 px-4 text-center font-bold text-slate-800 dark:text-white">${item.quantity}</td>
+                                <td class="py-3 px-4 text-center font-medium text-slate-400 line-through">₹${regularPrice}</td>
+                                <td class="py-3 px-4 text-center font-bold text-slate-900 dark:text-white">₹${offerPrice}</td>
+                                <td class="py-3 px-4 text-center font-bold text-slate-800 dark:text-white">${qty}</td>
                                 <td class="py-3 px-4 text-right font-bold text-slate-900 dark:text-white">₹${itemTotal}</td>
                             </tr>
                         `;
@@ -410,12 +514,16 @@
 
                     // Dynamic summary calculations
                     let delivery = subtotal >= 499 ? 0 : 49;
-                    let discount = (subtotal + delivery) - order.total_price;
-                    if (discount < 0) discount = 0;
+                    let couponDiscount = (subtotal + delivery) - order.total_price;
+                    if (couponDiscount < 0) couponDiscount = 0;
+
+                    let totalSavings = (mrpTotal - subtotal) + couponDiscount;
+                    if (totalSavings < 0) totalSavings = 0;
 
                     $('#lbl-invoice-subtotal').text('₹' + subtotal);
                     $('#lbl-invoice-delivery').text(delivery === 0 ? 'FREE' : '₹' + delivery);
-                    $('#lbl-invoice-discount').text(discount === 0 ? '₹0' : '-₹' + discount);
+                    $('#lbl-invoice-discount').text(couponDiscount === 0 ? '₹0' : '-₹' + couponDiscount);
+                    $('#lbl-invoice-savings').text('₹' + totalSavings);
 
                     // Store active ID on button
                     $('#btn-update-status').attr('data-id', order.id);

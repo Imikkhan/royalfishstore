@@ -107,6 +107,7 @@ export const Cart: React.FC = () => {
   const [newAddrName, setNewAddrName] = useState(user?.name || '');
   const [newAddrType, setNewAddrType] = useState<'Home' | 'Work' | 'Other'>('Home');
   const [newAddrLine, setNewAddrLine] = useState('');
+  const [newAddrLandmark, setNewAddrLandmark] = useState('');
   const [newAddrCity, setNewAddrCity] = useState('Kolkata');
   const [newAddrZip, setNewAddrZip] = useState(activePincode || '700135');
   const [newAddrPhone, setNewAddrPhone] = useState(user?.phone ? (user.phone.startsWith('+91') ? user.phone : `+91 ${user.phone.trim()}`) : '');
@@ -160,6 +161,7 @@ export const Cart: React.FC = () => {
       name: newAddrName,
       type: newAddrType,
       addressLine: newAddrLine,
+      landmark: newAddrLandmark,
       city: newAddrCity,
       zipCode: newAddrZip,
       phone: newAddrPhone
@@ -168,8 +170,9 @@ export const Cart: React.FC = () => {
     // Reset Form
     setNewAddrName('');
     setNewAddrLine('');
-    setNewAddrCity('');
-    setNewAddrZip('');
+    setNewAddrLandmark('');
+    setNewAddrCity('Kolkata');
+    setNewAddrZip(activePincode || '700135');
     setNewAddrPhone('');
     setShowAddressForm(false);
   };
@@ -388,9 +391,20 @@ export const Cart: React.FC = () => {
                     <input
                       type="text"
                       required
-                      placeholder="Flat/House No., Building Name, Street"
+                      placeholder="Flat/House No., Building Name, Street / রোড বা বাড়ির নাম"
                       value={newAddrLine}
                       onChange={e => setNewAddrLine(e.target.value)}
+                      className="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-700 rounded-lg text-gray-800 dark:text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2 space-y-1">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase">Nearby Landmark / চেনা জায়গা (Optional)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g., Near Big Bazaar, Masjid, Rail Gate, School"
+                      value={newAddrLandmark}
+                      onChange={e => setNewAddrLandmark(e.target.value)}
                       className="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-700 rounded-lg text-gray-800 dark:text-white focus:outline-none focus:border-red-500"
                     />
                   </div>
@@ -400,7 +414,7 @@ export const Cart: React.FC = () => {
                     <input
                       type="text"
                       required
-                      placeholder="e.g., Mumbai"
+                      placeholder="e.g., Kolkata"
                       value={newAddrCity}
                       onChange={e => setNewAddrCity(e.target.value)}
                       className="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-700 rounded-lg text-gray-800 dark:text-white focus:outline-none focus:border-red-500"
@@ -412,7 +426,7 @@ export const Cart: React.FC = () => {
                     <input
                       type="text"
                       required
-                      placeholder="e.g., 400001"
+                      placeholder="e.g., 700135"
                       value={newAddrZip}
                       onChange={e => setNewAddrZip(e.target.value)}
                       className="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-700 rounded-lg text-gray-800 dark:text-white focus:outline-none focus:border-red-500"
@@ -471,8 +485,12 @@ export const Cart: React.FC = () => {
                         {isSelected && <div className="w-1.5 h-1.5 bg-red-500 rounded-full" />}
                       </div>
                     </div>
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400 line-clamp-1 leading-normal mb-1">
-                      {addr.addressLine}
+                    <p className="text-[10px] text-gray-600 dark:text-gray-300 leading-snug mb-1">
+                      <span className="font-medium block">{addr.addressLine}</span>
+                      {addr.landmark && (
+                        <span className="text-gray-500 dark:text-gray-400 block text-[9.5px]">Near: {addr.landmark}</span>
+                      )}
+                      <span className="text-gray-500 dark:text-gray-400 block text-[9.5px]">{addr.city} - {addr.zipCode}</span>
                     </p>
                     <span className="text-[9px] font-mono font-medium text-gray-400 dark:text-gray-500">
                       Mob: {addr.phone}
