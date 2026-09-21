@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { CheckCircle2, Clock, MapPin, PackageCheck, ShoppingBag, ArrowRight } from 'lucide-react';
+import { trackPurchase } from '../utils/tracking';
 
 export const OrderSuccessModal: React.FC = () => {
   const {
@@ -9,6 +10,12 @@ export const OrderSuccessModal: React.FC = () => {
     lastPlacedOrder,
     navigateTo
   } = useApp();
+
+  useEffect(() => {
+    if (showOrderSuccessModal && lastPlacedOrder) {
+      trackPurchase(lastPlacedOrder);
+    }
+  }, [showOrderSuccessModal, lastPlacedOrder?.id]);
 
   if (!showOrderSuccessModal || !lastPlacedOrder) return null;
 

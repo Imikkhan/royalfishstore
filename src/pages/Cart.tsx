@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { ShoppingCart, Trash2, Tag, Truck, CreditCard, ChevronRight, CheckCircle, Smartphone, Globe, Landmark, MapPin, Plus, X, Loader2, Clock } from 'lucide-react';
+import { trackBeginCheckout } from '../utils/tracking';
 
 export const Cart: React.FC = () => {
   const {
@@ -33,6 +34,15 @@ export const Cart: React.FC = () => {
   const [couponInput, setCouponInput] = useState('');
   const [couponError, setCouponError] = useState('');
   const [couponSuccess, setCouponSuccess] = useState(false);
+
+  // Track begin_checkout when checkout page loads with items (once per checkout view)
+  const hasTrackedCheckoutRef = useRef(false);
+  useEffect(() => {
+    if (cart.length > 0 && !hasTrackedCheckoutRef.current) {
+      hasTrackedCheckoutRef.current = true;
+      trackBeginCheckout(cart, cartTotal);
+    }
+  }, [cart, cartTotal]);
 
   // Derive Delivery Time Slots directly from the products in Cart
   const availableDeliverySlots = useMemo(() => {

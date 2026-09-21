@@ -4,6 +4,7 @@ import { PRODUCTS, CATEGORIES, PROMO_SLIDES } from '../data/products';
 import { API_BASE_URL } from '../config';
 
 import { Toast, ToastMessage } from '../components/Toast';
+import { trackAddToCart, trackPurchase } from '../utils/tracking';
 
 // Helper: resolve relative image URLs to absolute using the API domain
 const API_DOMAIN = API_BASE_URL.replace(/\/api\/?$/, '');
@@ -630,6 +631,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const maxQty = Math.max(1, Number(product.maxOrderQty || (product as any).max_order_qty || 10));
     const availableStock = product.stockQuantity !== undefined ? Number(product.stockQuantity) : 999;
 
+    // Track add_to_cart for GA4 / Meta Pixel GTM
+    const existingInCart = cart.find(item => item.product.id === product.id);
+    if (existingInCart) {
+      if (existingInCart.quantity + 1 <= maxQty && existingInCart.quantity + 1 <= availableStock) {
+        trackAddToCart(product, 1);
+      }
+    } else {
+      const initialQty = Math.min(minQty, availableStock);
+      if (initialQty <= maxQty) {
+        trackAddToCart(product, initialQty);
+      }
+    }
+
     setCart(prev => {
       const existingIndex = prev.findIndex(item => item.product.id === product.id);
       if (existingIndex > -1) {
@@ -801,6 +815,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const newOrder = await res.json();
         setOrders(prev => [newOrder, ...prev]);
         setLastPlacedOrder(newOrder);
+        // Track purchase event for GA4 / Meta Pixel GTM (once per order)
+        trackPurchase(newOrder, cart);
         clearCart();
         setShowOrderSuccessModal(true);
       } else {

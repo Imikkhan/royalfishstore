@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { ChevronLeft, Star, Clock, Heart, Award, Sparkles, ChefHat, Check, ShieldCheck, ShoppingBag, ArrowLeft, Snowflake } from 'lucide-react';
+import { trackViewItem } from '../utils/tracking';
 
 export const ProductDetails: React.FC = () => {
   const { 
@@ -12,6 +13,12 @@ export const ProductDetails: React.FC = () => {
     navigateTo, 
     cartTotal 
   } = useApp();
+
+  useEffect(() => {
+    if (selectedProduct) {
+      trackViewItem(selectedProduct);
+    }
+  }, [selectedProduct?.id]);
 
   if (!selectedProduct) {
     return (
