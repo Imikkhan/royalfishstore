@@ -273,13 +273,59 @@ class ApiController extends Controller
         ]);
 
         $pincode = trim($request->pincode);
-        $deliverable = true;
-        
+        $cleanPin = preg_replace('/\D/', '', $pincode);
+
+        // Check if any active product is deliverable to this pincode
+        $activeProducts = Product::where('is_active', true)->get();
+        $deliverable = false;
+
+        foreach ($activeProducts as $product) {
+            if ($product->isDeliverableToPincode($cleanPin)) {
+                $deliverable = true;
+                break;
+            }
+        }
+
         return response()->json([
-            'pincode' => $pincode,
+            'pincode' => $cleanPin,
             'isDeliverable' => $deliverable,
-            'estimatedTime' => '30-45 Mins Express',
-            'message' => 'Express delivery available for ' . $pincode
+            'estimatedTime' => $deliverable ? '30-45 Mins Express' : null,
+            'message' => $deliverable 
+                ? 'Express delivery available for ' . $cleanPin
+                : 'Delivery is currently not available for ' . $cleanPin . '. Please select a serviceable location.'
+        ]);
+    }
+
+    /**
+     * Get all unique serviceable pincodes across active products.
+     */
+    public function getServiceablePincodes()
+    {
+        $activeProducts = Product::where('is_active', true)->get();
+        $pincodes = [];
+        $hasWildcard = false;
+
+        foreach ($activeProducts as $p) {
+            $pins = $p->serviced_pincodes;
+            if (is_array($pins)) {
+                foreach ($pins as $pin) {
+                    $pin = trim((string)$pin);
+                    if ($pin === '*') {
+                        $hasWildcard = true;
+                    } elseif (strlen($pin) === 6 && ctype_digit($pin)) {
+                        $pincodes[$pin] = true;
+                    }
+                }
+            }
+        }
+
+        $uniquePincodes = array_keys($pincodes);
+        sort($uniquePincodes);
+
+        return response()->json([
+            'serviceable_pincodes' => $uniquePincodes,
+            'has_wildcard' => $hasWildcard,
+            'default_pincode' => !empty($uniquePincodes) ? $uniquePincodes[0] : '700156'
         ]);
     }
 
@@ -417,7 +463,7 @@ class ApiController extends Controller
     /**
      * Get detailed info for a single product.
      */
-    public function getProduct($codeOrSlug)
+    public function getProduct(Request $request, $codeOrSlug)
     {
         $p = Product::where('is_active', true)
             ->where(function($q) use ($codeOrSlug) {
@@ -463,6 +509,9 @@ class ApiController extends Controller
         $isOutOfStock = !$inStock || $stockQuantity <= 0;
         $isLowStock = $inStock && $stockQuantity > 0 && $stockQuantity <= $lowStockThreshold;
 
+        $userPincode = $request->input('pincode');
+        $isDeliverable = $userPincode ? $p->isDeliverableToPincode($userPincode) : true;
+
         $productData = [
             'id' => $p->product_code,
             'name' => $p->name,
@@ -481,6 +530,8 @@ class ApiController extends Controller
             'deliveryTime' => $deliverySlotResolved,
             'delivery_time' => $deliverySlotResolved,
             'tags' => $p->tags ?: [],
+            'servicedPincodes' => $p->serviced_pincodes,
+            'isDeliverable' => $isDeliverable,
             'rating' => $p->rating,
             'reviewsCount' => $p->reviews_count,
             'isBestSeller' => $p->is_best_seller,
@@ -916,13 +967,34 @@ class ApiController extends Controller
             ->get()
             ->keyBy('product_code');
 
-        // 3. Validate Stock & Limits for every cart item
+        // 3. Validate Delivery Pincode & Serviceability
+        $deliveryPincode = trim((string)($request->address['zipCode'] ?? $request->address['pincode'] ?? ''));
+        $cleanDeliveryPincode = preg_replace('/\D/', '', $deliveryPincode);
+
+        if (empty($cleanDeliveryPincode) || strlen($cleanDeliveryPincode) !== 6) {
+            return response()->json([
+                'error' => 'invalid_delivery_pincode',
+                'message' => 'Please provide a valid 6-digit delivery pincode for your address.'
+            ], 422);
+        }
+
+        // Validate Stock, Limits & Pincode Deliverability for every cart item
         foreach ($request->cart as $item) {
             $code = $item['product']['id'] ?? null;
             $product = $code ? ($productsByCode[$code] ?? null) : null;
             $reqQty = (int)$item['quantity'];
 
             if ($product) {
+                // Strict Pincode Deliverability check
+                if (!$product->isDeliverableToPincode($cleanDeliveryPincode)) {
+                    return response()->json([
+                        'error' => 'pincode_not_serviceable',
+                        'message' => "'{$product->name}' is not deliverable to pincode {$cleanDeliveryPincode}. Please change your address or remove this item.",
+                        'undeliverable_item' => $product->name,
+                        'pincode' => $cleanDeliveryPincode
+                    ], 422);
+                }
+
                 // Min Order Quantity validation
                 $minQty = max(1, (int)($product->min_order_qty ?: 1));
                 if ($reqQty < $minQty) {

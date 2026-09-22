@@ -65,6 +65,74 @@ class Product extends Model
         return $this->in_stock && $this->stock_quantity > 0 && $this->stock_quantity <= ($this->low_stock_threshold ?: 5);
     }
 
+    /**
+     * Safely parse serviced pincodes as a clean array of strings
+     */
+    public function getServicedPincodesAttribute($val)
+    {
+        if (is_array($val)) return array_values(array_filter(array_map('strval', $val)));
+        if (empty($val)) return [];
+        if (is_string($val)) {
+            $decoded = json_decode($val, true);
+            if (is_array($decoded)) return array_values(array_filter(array_map('strval', $decoded)));
+            if (is_string($decoded)) {
+                $second = json_decode($decoded, true);
+                if (is_array($second)) return array_values(array_filter(array_map('strval', $second)));
+            }
+            if (str_contains($val, ',')) {
+                return array_values(array_filter(array_map('trim', explode(',', $val))));
+            }
+            return [trim($val)];
+        }
+        return [];
+    }
+
+    /**
+     * Ensure serviced pincodes are always stored as valid JSON array
+     */
+    public function setServicedPincodesAttribute($val)
+    {
+        if (is_array($val)) {
+            $this->attributes['serviced_pincodes'] = json_encode(array_values(array_filter(array_map('trim', $val))));
+        } elseif (is_string($val)) {
+            $decoded = json_decode($val, true);
+            if (is_array($decoded)) {
+                $this->attributes['serviced_pincodes'] = json_encode(array_values(array_filter(array_map('trim', $decoded))));
+            } elseif (str_contains($val, ',')) {
+                $this->attributes['serviced_pincodes'] = json_encode(array_values(array_filter(array_map('trim', explode(',', $val)))));
+            } elseif (!empty(trim($val))) {
+                $this->attributes['serviced_pincodes'] = json_encode([trim($val)]);
+            } else {
+                $this->attributes['serviced_pincodes'] = json_encode([]);
+            }
+        } else {
+            $this->attributes['serviced_pincodes'] = json_encode([]);
+        }
+    }
+
+    /**
+     * Check if product is deliverable to a specific pincode
+     */
+    public function isDeliverableToPincode(?string $pincode): bool
+    {
+        if (!$pincode) {
+            return false;
+        }
+        $cleanPin = preg_replace('/\D/', '', $pincode);
+        if (strlen($cleanPin) !== 6) {
+            return false;
+        }
+
+        $pins = $this->serviced_pincodes;
+        if (empty($pins)) {
+            return false;
+        }
+        if (in_array('*', $pins)) {
+            return true;
+        }
+        return in_array($cleanPin, $pins);
+    }
+
     public function category()
     {
         return $this->belongsTo(Category::class);

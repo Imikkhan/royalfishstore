@@ -11,7 +11,9 @@ export const ProductDetails: React.FC = () => {
     removeFromCart, 
     getCartQuantity, 
     navigateTo, 
-    cartTotal 
+    cartTotal,
+    activePincode,
+    setIsPincodeModalOpen,
   } = useApp();
 
   useEffect(() => {
@@ -41,6 +43,13 @@ export const ProductDetails: React.FC = () => {
   }
 
   const quantity = getCartQuantity(selectedProduct.id);
+  const isDeliverable = (selectedProduct.isDeliverable !== false) && (
+    !activePincode || 
+    !selectedProduct.servicedPincodes || 
+    selectedProduct.servicedPincodes.length === 0 || 
+    selectedProduct.servicedPincodes.includes('*') || 
+    selectedProduct.servicedPincodes.includes(activePincode)
+  );
   const isOutOfStock = Boolean(selectedProduct.isOutOfStock || (selectedProduct.stockQuantity !== undefined && selectedProduct.stockQuantity <= 0) || selectedProduct.inStock === false || (selectedProduct as any).in_stock === false);
   const stockQty = selectedProduct.stockQuantity !== undefined ? Number(selectedProduct.stockQuantity) : 50;
   const lowThreshold = Number(selectedProduct.lowStockThreshold || (selectedProduct as any).low_stock_threshold || 5);
@@ -178,6 +187,19 @@ export const ProductDetails: React.FC = () => {
                 {isOutOfStock ? (
                   <div className="w-full sm:w-auto bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-extrabold text-xs sm:text-sm px-6 py-3 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed uppercase tracking-wider border border-slate-300/50 dark:border-slate-700/50">
                     <span>OUT OF STOCK</span>
+                  </div>
+                ) : !isDeliverable ? (
+                  <div className="flex flex-col sm:flex-row items-center gap-2">
+                    <div className="w-full sm:w-auto bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-bold text-xs sm:text-sm px-4 py-3 rounded-xl flex items-center justify-center gap-1.5 cursor-not-allowed border border-amber-200 dark:border-amber-800/60 uppercase tracking-wide">
+                      <span>NOT DELIVERABLE TO {activePincode}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsPincodeModalOpen(true)}
+                      className="text-xs text-red-600 dark:text-red-400 underline font-bold hover:no-underline cursor-pointer py-1"
+                    >
+                      Change Pincode
+                    </button>
                   </div>
                 ) : quantity === 0 ? (
                   <button

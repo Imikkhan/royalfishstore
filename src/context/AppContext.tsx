@@ -102,6 +102,8 @@ interface AppContextType {
   // Pincode Location State
   activePincode: string;
   setPincode: (pin: string) => void;
+  serviceablePincodes: string[];
+  isPincodeServiceable: (pin: string, product?: Product) => boolean;
   isPincodeModalOpen: boolean;
   setIsPincodeModalOpen: (open: boolean) => void;
 
@@ -207,8 +209,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Pincode & Location State
   const [activePincode, setActivePincode] = useState<string>(() => {
-    return localStorage.getItem('royal-fish-pincode') || '400001';
+    const saved = localStorage.getItem('royal-fish-pincode');
+    if (saved && saved !== '400001' && saved !== '110001') {
+      return saved;
+    }
+    return '700135';
   });
+  const [serviceablePincodes, setServiceablePincodes] = useState<string[]>([]);
   const [isPincodeModalOpen, setIsPincodeModalOpen] = useState(false);
 
   // Dynamic Lists State — start empty so only API data is shown (skeleton shows while loading)
@@ -230,10 +237,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [isLoadingVideos, setIsLoadingVideos] = useState<boolean>(true);
 
-  const setPincode = (pin: string) => {
-    setActivePincode(pin);
-    localStorage.setItem('royal-fish-pincode', pin);
+  // Helper to verify if a pincode is serviceable
+  const isPincodeServiceable = (pin: string, product?: Product): boolean => {
+    if (!pin) return false;
+    const clean = pin.trim().replace(/\D/g, '');
+    if (clean.length !== 6) return false;
+
+    if (product) {
+      const pins = product.servicedPincodes;
+      if (!pins || pins.length === 0) return false;
+      if (pins.includes('*')) return true;
+      return pins.includes(clean);
+    }
+
+    if (serviceablePincodes.length > 0) {
+      return serviceablePincodes.includes(clean);
+    }
+
+    if (products.length > 0) {
+      return products.some(p => {
+        const pins = p.servicedPincodes;
+        return pins && (pins.includes('*') || pins.includes(clean));
+      });
+    }
+
+    return true;
   };
+
+  const setPincode = (pin: string) => {
+    const clean = pin.trim().replace(/\D/g, '');
+    setActivePincode(clean);
+    localStorage.setItem('royal-fish-pincode', clean);
+  };
+
+  // Fetch unique serviceable pincodes from backend
+  useEffect(() => {
+    const fetchServiceable = () => {
+      fetch(`${API_BASE_URL}/serviceable-pincodes`)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data.serviceable_pincodes)) {
+            setServiceablePincodes(data.serviceable_pincodes.map(String));
+          }
+        })
+        .catch(() => {});
+    };
+    fetchServiceable();
+  }, []);
 
   // Cart State
   const [cart, setCart] = useState<CartItem[]>(() => {
@@ -627,6 +677,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
+    // Check pincode deliverability if activePincode is set
+    if (activePincode && product.servicedPincodes && product.servicedPincodes.length > 0) {
+      if (!product.servicedPincodes.includes('*') && !product.servicedPincodes.includes(activePincode)) {
+        showToast(`${product.name} is not deliverable to pincode ${activePincode}. Admin has restricted delivery for this product.`, 'warning');
+        return;
+      }
+    }
+
     const minQty = Math.max(1, Number(product.minOrderQty || (product as any).min_order_qty || 1));
     const maxQty = Math.max(1, Number(product.maxOrderQty || (product as any).max_order_qty || 10));
     const availableStock = product.stockQuantity !== undefined ? Number(product.stockQuantity) : 999;
@@ -785,7 +843,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
-    setIsPlacingOrder(true);
     const rawAddress = addresses.find(a => a.id === selectedAddressId) || addresses[0];
     const userPhoneClean = user?.phone ? (user.phone.startsWith('+91') ? user.phone : `+91 ${user.phone.trim()}`) : '';
     const selectedAddress = {
@@ -794,6 +851,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ? rawAddress.phone 
         : (userPhoneClean || rawAddress?.phone || '')
     };
+
+    // Strict Pincode validation: Check delivery address pincode
+    const deliveryPincode = (selectedAddress?.zipCode || (selectedAddress as any)?.pincode || activePincode || '').toString().trim().replace(/\D/g, '');
+    if (!deliveryPincode || deliveryPincode.length !== 6) {
+      showToast("Please provide a valid 6-digit delivery pincode.", "warning");
+      return;
+    }
+
+    // Check all cart items for serviceability to deliveryPincode
+    const undeliverableItems = cart.filter(item => {
+      const pins = item.product.servicedPincodes;
+      if (!pins || pins.length === 0) return true;
+      if (pins.includes('*')) return false;
+      return !pins.includes(deliveryPincode);
+    });
+
+    if (undeliverableItems.length > 0) {
+      const names = undeliverableItems.map(i => i.product.name).join(', ');
+      showToast(`Item(s) [${names}] are not deliverable to pincode ${deliveryPincode}. Admin has restricted delivery for this product.`, "error");
+      return;
+    }
+
+    setIsPlacingOrder(true);
 
     try {
       const res = await fetch(`${API_BASE_URL}/orders`, {
@@ -876,6 +956,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         freeDeliveryThreshold,
         activePincode,
         setPincode,
+        serviceablePincodes,
+        isPincodeServiceable,
         isPincodeModalOpen,
         setIsPincodeModalOpen,
         isLoadingProducts,

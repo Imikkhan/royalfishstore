@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { ShoppingCart, Trash2, Tag, Truck, CreditCard, ChevronRight, CheckCircle, Smartphone, Globe, Landmark, MapPin, Plus, X, Loader2, Clock } from 'lucide-react';
+import { ShoppingCart, Trash2, Tag, Truck, CreditCard, ChevronRight, CheckCircle, Smartphone, Globe, Landmark, MapPin, Plus, X, Loader2, Clock, AlertCircle } from 'lucide-react';
 import { trackBeginCheckout } from '../utils/tracking';
 
 export const Cart: React.FC = () => {
@@ -27,6 +27,7 @@ export const Cart: React.FC = () => {
     isPlacingOrder,
     navigateTo,
     activePincode,
+    isPincodeServiceable,
     user,
     showToast
   } = useApp();
@@ -112,6 +113,23 @@ export const Cart: React.FC = () => {
   const [newAddrZip, setNewAddrZip] = useState(activePincode || '700135');
   const [newAddrPhone, setNewAddrPhone] = useState(user?.phone ? (user.phone.startsWith('+91') ? user.phone : `+91 ${user.phone.trim()}`) : '');
 
+  // Selected Delivery Address & Zip Code
+  const selectedAddress = addresses.find(a => a.id === selectedAddressId) || addresses[0];
+  const selectedZip = (selectedAddress?.zipCode || (selectedAddress as any)?.pincode || activePincode || '').toString().trim().replace(/\D/g, '');
+
+  // Calculate items that cannot be delivered to selected delivery address pincode
+  const undeliverableCartItems = useMemo(() => {
+    if (!selectedZip || selectedZip.length !== 6) return [];
+    return cart.filter(item => {
+      const pins = item.product.servicedPincodes;
+      if (!pins || pins.length === 0) return true;
+      if (pins.includes('*')) return false;
+      return !pins.includes(selectedZip);
+    });
+  }, [cart, selectedZip]);
+
+  const hasUndeliverableItems = undeliverableCartItems.length > 0;
+
   // Reset coupon since coupon is hidden
   useEffect(() => {
     applyCoupon('');
@@ -157,13 +175,24 @@ export const Cart: React.FC = () => {
       return;
     }
 
+    const cleanZip = newAddrZip.trim().replace(/\D/g, '');
+    if (cleanZip.length !== 6) {
+      showToast('Please enter a valid 6-digit delivery pincode!', 'warning');
+      return;
+    }
+
+    if (!isPincodeServiceable(cleanZip)) {
+      showToast(`Sorry, delivery is not available for pincode ${cleanZip}. Please provide an address in our delivery zones.`, 'warning');
+      return;
+    }
+
     addAddress({
       name: newAddrName,
       type: newAddrType,
       addressLine: newAddrLine,
       landmark: newAddrLandmark,
       city: newAddrCity,
-      zipCode: newAddrZip,
+      zipCode: cleanZip,
       phone: newAddrPhone
     });
 
@@ -786,23 +815,38 @@ export const Cart: React.FC = () => {
                   Delivery Slot: {selectedDeliverySlot}
                 </span>
                 <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">
-                  To the selected destination address. Sanitized temperature controlled dispatch.
+                  Destination Address Pincode: <strong>{selectedZip || 'Not selected'}</strong>.
                 </p>
               </div>
             </div>
 
+            {/* Undeliverable Items Pincode Warning Banner */}
+            {hasUndeliverableItems && (
+              <div className="p-3.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 rounded-xl space-y-1.5">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-red-700 dark:text-red-300">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>Cannot Deliver to Pincode {selectedZip}</span>
+                </div>
+                <p className="text-[11px] text-red-600 dark:text-red-400 leading-tight">
+                  Item(s) <strong>{undeliverableCartItems.map(i => i.product.name).join(', ')}</strong> cannot be delivered to {selectedZip}. Admin has restricted delivery for these items to specific serviceable areas. Please change your address or remove these items from your basket.
+                </p>
+              </div>
+            )}
+
             {/* Main Action Trigger */}
             <button
               onClick={() => placeOrder(selectedDeliverySlot)}
-              disabled={isPlacingOrder || (cartSubtotal < minOrderAmount && minOrderAmount > 0)}
+              disabled={isPlacingOrder || hasUndeliverableItems || (cartSubtotal < minOrderAmount && minOrderAmount > 0)}
               className={`w-full text-white font-extrabold text-sm py-3.5 rounded-xl transition-all shadow-xl flex items-center justify-center gap-2 ${
                 isPlacingOrder
                   ? 'bg-orange-400 cursor-not-allowed opacity-90'
-                  : cartSubtotal < minOrderAmount && minOrderAmount > 0
-                    ? 'bg-slate-300 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed shadow-none border border-slate-200 dark:border-slate-700'
-                    : !user
-                      ? 'bg-amber-600 hover:bg-amber-700 active:scale-[0.99] cursor-pointer'
-                      : 'bg-[#fc490f] hover:bg-orange-600 active:scale-[0.99] cursor-pointer'
+                  : hasUndeliverableItems
+                    ? 'bg-red-500/80 text-white cursor-not-allowed shadow-none'
+                    : cartSubtotal < minOrderAmount && minOrderAmount > 0
+                      ? 'bg-slate-300 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-not-allowed shadow-none border border-slate-200 dark:border-slate-700'
+                      : !user
+                        ? 'bg-amber-600 hover:bg-amber-700 active:scale-[0.99] cursor-pointer'
+                        : 'bg-[#fc490f] hover:bg-orange-600 active:scale-[0.99] cursor-pointer'
               }`}
               id="btn-place-order"
             >
@@ -810,6 +854,11 @@ export const Cart: React.FC = () => {
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
                   <span>PLACING ORDER...</span>
+                </>
+              ) : hasUndeliverableItems ? (
+                <>
+                  <AlertCircle className="w-4 h-4" />
+                  <span>NOT DELIVERABLE TO {selectedZip}</span>
                 </>
               ) : cartSubtotal < minOrderAmount && minOrderAmount > 0 ? (
                 <>

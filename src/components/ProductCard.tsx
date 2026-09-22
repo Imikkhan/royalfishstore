@@ -8,9 +8,15 @@ interface ProductCardProps {
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
-  const { navigateTo, addToCart, removeFromCart, getCartQuantity, activePincode } = useApp();
+  const { navigateTo, addToCart, removeFromCart, getCartQuantity, activePincode, showToast } = useApp();
   const quantity = getCartQuantity(product.id);
-  const isDeliverable = product.isDeliverable !== false;
+  const isDeliverable = (product.isDeliverable !== false) && (
+    !activePincode || 
+    !product.servicedPincodes || 
+    product.servicedPincodes.length === 0 || 
+    product.servicedPincodes.includes('*') || 
+    product.servicedPincodes.includes(activePincode)
+  );
   const isOutOfStock = Boolean(product.isOutOfStock || (product.stockQuantity !== undefined && product.stockQuantity <= 0) || product.inStock === false || (product as any).in_stock === false);
   const stockQty = product.stockQuantity !== undefined ? Number(product.stockQuantity) : 50;
   const lowThreshold = Number(product.lowStockThreshold || (product as any).low_stock_threshold || 5);
@@ -32,6 +38,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const handleAdd = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isOutOfStock) return;
+    if (!isDeliverable) {
+      showToast(`${product.name} is not deliverable to pincode ${activePincode}.`, 'warning');
+      return;
+    }
     addToCart(product);
   };
 
@@ -56,11 +66,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           loading="lazy"
         />
         
-        {/* Top-Left: Snowflake Freshness Badge or Out of Stock Tag */}
+        {/* Top-Left: Snowflake Freshness Badge or Out of Stock / Undeliverable Tag */}
         {isOutOfStock ? (
           <div className="absolute top-2.5 left-2.5 bg-slate-950/90 text-white text-[10px] font-black px-2.5 py-1 rounded-lg shadow-md uppercase tracking-wider flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span>
             <span>Sold Out</span>
+          </div>
+        ) : !isDeliverable ? (
+          <div className="absolute top-2.5 left-2.5 bg-amber-600 text-white text-[9.5px] font-black px-2 py-0.5 rounded-md shadow-md uppercase tracking-wider">
+            Not Deliverable
           </div>
         ) : (
           <div className="absolute top-2.5 left-2.5 bg-[#fc490f] text-white p-1.5 rounded-full shadow-md flex items-center justify-center">
@@ -138,6 +152,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                 id={`sold-out-btn-${product.id}`}
               >
                 <span>OUT OF STOCK</span>
+              </div>
+            ) : !isDeliverable ? (
+              <div 
+                className="w-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-bold text-xs py-2 px-2.5 rounded-xl flex items-center justify-center gap-1 uppercase tracking-wide cursor-not-allowed select-none border border-amber-200 dark:border-amber-800/60"
+                title={`Not deliverable to ${activePincode}`}
+              >
+                <span>NOT DELIVERABLE</span>
               </div>
             ) : quantity === 0 ? (
               <button

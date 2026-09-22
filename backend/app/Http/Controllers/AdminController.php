@@ -606,7 +606,7 @@ class AdminController extends Controller
 
         $servicedPincodesArray = [];
         if ($request->serviced_pincodes) {
-            $servicedPincodesArray = array_map('trim', explode(',', $request->serviced_pincodes));
+            $servicedPincodesArray = array_values(array_filter(array_map('trim', explode(',', $request->serviced_pincodes))));
         }
 
         $price = (float)$request->price;
@@ -638,7 +638,7 @@ class AdminController extends Controller
             'short_description' => $request->short_description,
             'delivery_time' => $request->delivery_time,
             'tags' => json_encode($tagsArray),
-            'serviced_pincodes' => json_encode($servicedPincodesArray),
+            'serviced_pincodes' => $servicedPincodesArray,
             'stock_quantity' => $stockQuantity,
             'in_stock' => $inStock,
             'low_stock_threshold' => $lowStockThreshold,
@@ -703,7 +703,7 @@ class AdminController extends Controller
 
         $servicedPincodesArray = [];
         if ($request->serviced_pincodes) {
-            $servicedPincodesArray = array_map('trim', explode(',', $request->serviced_pincodes));
+            $servicedPincodesArray = array_values(array_filter(array_map('trim', explode(',', $request->serviced_pincodes))));
         }
 
         $price = (float)$request->price;
@@ -733,7 +733,7 @@ class AdminController extends Controller
             'short_description' => $request->short_description,
             'delivery_time' => $request->delivery_time,
             'tags' => json_encode($tagsArray),
-            'serviced_pincodes' => json_encode($servicedPincodesArray),
+            'serviced_pincodes' => $servicedPincodesArray,
             'stock_quantity' => $stockQuantity,
             'in_stock' => $inStock,
             'low_stock_threshold' => $lowStockThreshold,

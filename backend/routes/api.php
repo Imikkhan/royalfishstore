@@ -18,6 +18,7 @@ Route::get('/categories', [ApiController::class, 'getCategories']);
 Route::get('/products', [ApiController::class, 'getProducts']);
 Route::get('/products/{codeOrSlug}', [ApiController::class, 'getProduct']);
 Route::post('/check-pincode', [ApiController::class, 'checkPincode']);
+Route::get('/serviceable-pincodes', [ApiController::class, 'getServiceablePincodes']);
 // WhatsApp OTP Authentication Endpoints
 Route::post('/send-otp', [ApiController::class, 'sendOtp']);
 Route::post('/auth/send-otp', [ApiController::class, 'sendOtp']);
