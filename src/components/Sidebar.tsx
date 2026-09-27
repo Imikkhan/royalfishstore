@@ -146,7 +146,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                   onClick={() => {
                     setSelectedCategory(catId);
                     setSelectedSubCategory(null);
-                    navigateTo('category-view');
+                    navigateTo('category-view', undefined, undefined, catId);
                     onClose();
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}

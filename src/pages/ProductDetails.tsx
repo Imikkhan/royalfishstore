@@ -6,6 +6,9 @@ import { trackViewItem } from '../utils/tracking';
 export const ProductDetails: React.FC = () => {
   const { 
     selectedProduct, 
+    selectedProductId,
+    isLoadingProducts,
+    isLoadingSingleProduct,
     goBack, 
     addToCart, 
     removeFromCart, 
@@ -22,6 +25,45 @@ export const ProductDetails: React.FC = () => {
     }
   }, [selectedProduct?.id]);
 
+  // Loading Skeleton while product is being loaded from URL
+  if (!selectedProduct && (isLoadingSingleProduct || (isLoadingProducts && !selectedProduct))) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-pulse">
+        {/* Breadcrumb Skeleton */}
+        <div className="h-5 w-32 bg-gray-200 dark:bg-slate-800 rounded-md mb-6" />
+
+        {/* Main Grid Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12">
+          {/* Left Column Image Skeleton */}
+          <div className="md:col-span-6 space-y-4">
+            <div className="aspect-4/3 rounded-3xl bg-gray-200 dark:bg-slate-800" />
+            <div className="grid grid-cols-3 gap-3">
+              <div className="h-16 rounded-2xl bg-gray-200 dark:bg-slate-800" />
+              <div className="h-16 rounded-2xl bg-gray-200 dark:bg-slate-800" />
+              <div className="h-16 rounded-2xl bg-gray-200 dark:bg-slate-800" />
+            </div>
+          </div>
+
+          {/* Right Column Details Skeleton */}
+          <div className="md:col-span-6 space-y-6">
+            <div className="space-y-3">
+              <div className="h-4 w-24 bg-gray-200 dark:bg-slate-800 rounded" />
+              <div className="h-8 w-3/4 bg-gray-200 dark:bg-slate-800 rounded-lg" />
+              <div className="h-4 w-40 bg-gray-200 dark:bg-slate-800 rounded" />
+            </div>
+
+            <div className="h-20 rounded-2xl bg-gray-200 dark:bg-slate-800" />
+            <div className="h-14 w-full bg-gray-200 dark:bg-slate-800 rounded-2xl" />
+            <div className="space-y-2">
+              <div className="h-4 w-full bg-gray-200 dark:bg-slate-800 rounded" />
+              <div className="h-4 w-5/6 bg-gray-200 dark:bg-slate-800 rounded" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!selectedProduct) {
     return (
       <div className="text-center py-20 space-y-4">
@@ -34,7 +76,7 @@ export const ProductDetails: React.FC = () => {
         </p>
         <button
           onClick={goBack}
-          className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-md"
+          className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-md cursor-pointer"
         >
           Go Back Home
         </button>

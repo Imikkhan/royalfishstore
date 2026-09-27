@@ -535,6 +535,9 @@ class ApiController extends Controller
             ->where(function($q) use ($codeOrSlug) {
                 $q->where('product_code', $codeOrSlug)
                   ->orWhere('slug', $codeOrSlug);
+                if (is_numeric($codeOrSlug)) {
+                    $q->orWhere('id', (int)$codeOrSlug);
+                }
             })
             ->with('category')
             ->first();

@@ -28,7 +28,7 @@ export const Categories: React.FC = () => {
   const handleSelectCategory = (catId: string, subCat?: string) => {
     setSelectedCategory(catId);
     setSelectedSubCategory(subCat || null);
-    navigateTo('category-view');
+    navigateTo('category-view', undefined, undefined, catId);
   };
 
   const filteredCategories = categories.filter(cat => {

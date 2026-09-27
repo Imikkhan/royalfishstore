@@ -32,7 +32,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     : 0;
 
   const handleCardClick = () => {
-    navigateTo('product-details', product.id, product);
+    navigateTo('product-details', product.slug || product.product_code || product.id, product);
   };
 
   const handleAdd = (e: React.MouseEvent) => {

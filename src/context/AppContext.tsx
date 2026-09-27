@@ -24,6 +24,149 @@ const safeParseArray = (val: any): any[] => {
   return [];
 };
 
+// Helper: Route parsing and URL generation for full SPA routing
+export interface ParsedRoute {
+  page: PageId;
+  productId: string | null;
+  category: string | null;
+  query: string | null;
+}
+
+export const parseLocationToRoute = (): ParsedRoute => {
+  if (typeof window === 'undefined') {
+    return { page: 'home', productId: null, category: null, query: null };
+  }
+
+  let rawPath = window.location.pathname;
+  let rawSearch = window.location.search;
+  if (rawPath.includes('?')) {
+    const parts = rawPath.split('?');
+    rawPath = parts[0];
+    rawSearch = rawSearch ? rawSearch + '&' + parts[1] : '?' + parts[1];
+  }
+  const path = rawPath.replace(/\/+$/, '') || '/';
+  const search = rawSearch;
+  const hash = window.location.hash;
+  const params = new URLSearchParams(search);
+  const pageParam = params.get('page');
+
+  // 1. Onepager check (supports /onepager, #onepager, or ad tracking parameters)
+  if (
+    path === '/onepager' ||
+    pageParam === 'onepager' ||
+    hash === '#onepager' ||
+    params.get('ad') === 'fb' ||
+    params.has('fbclid')
+  ) {
+    return { page: 'onepager', productId: null, category: null, query: null };
+  }
+
+  // 2. Product Details check
+  // Clean paths: /product/:slugOrId or /products/:slugOrId
+  const productMatch = path.match(/^\/(?:product|products)\/([^/?#]+)/i);
+  if (productMatch) {
+    return {
+      page: 'product-details',
+      productId: decodeURIComponent(productMatch[1]),
+      category: null,
+      query: null,
+    };
+  }
+  // Query param fallback: ?page=product-details&id=... or ?product=...
+  if (pageParam === 'product-details' || params.has('product')) {
+    const prodId = params.get('id') || params.get('product') || params.get('code') || params.get('slug');
+    if (prodId) {
+      return {
+        page: 'product-details',
+        productId: prodId,
+        category: null,
+        query: null,
+      };
+    }
+  }
+
+  // 3. Category View check
+  // Clean path: /category/:categorySlug
+  const categoryMatch = path.match(/^\/category\/([^/?#]+)/i);
+  if (categoryMatch) {
+    return {
+      page: 'category-view',
+      productId: null,
+      category: decodeURIComponent(categoryMatch[1]),
+      query: null,
+    };
+  }
+  if (pageParam === 'category-view' || (pageParam === 'categories' && params.has('category')) || params.has('category')) {
+    const cat = params.get('category');
+    if (cat) {
+      return {
+        page: 'category-view',
+        productId: null,
+        category: cat,
+        query: null,
+      };
+    }
+  }
+
+  // 4. Other Standard Clean Paths
+  if (path === '/cart' || pageParam === 'cart') {
+    return { page: 'cart', productId: null, category: null, query: null };
+  }
+  if (path === '/login' || pageParam === 'login') {
+    return { page: 'login', productId: null, category: null, query: null };
+  }
+  if (path === '/profile' || pageParam === 'profile') {
+    return { page: 'profile', productId: null, category: null, query: null };
+  }
+  if (path === '/categories' || pageParam === 'categories') {
+    return { page: 'categories', productId: null, category: null, query: null };
+  }
+  if (path === '/search' || pageParam === 'search') {
+    return {
+      page: 'search',
+      productId: null,
+      category: null,
+      query: params.get('q') || params.get('search') || null,
+    };
+  }
+
+  return { page: 'home', productId: null, category: null, query: null };
+};
+
+export const buildUrlForRoute = (
+  page: PageId,
+  productId?: string | null,
+  productData?: Product | null,
+  categorySlug?: string | null,
+  query?: string | null
+): string => {
+  switch (page) {
+    case 'home':
+      return '/';
+    case 'product-details': {
+      const slugOrId = productData?.slug || productData?.product_code || (productData ? String(productData.id) : null) || productId;
+      return slugOrId ? `/product/${encodeURIComponent(slugOrId)}` : '/';
+    }
+    case 'category-view': {
+      return categorySlug ? `/category/${encodeURIComponent(categorySlug)}` : '/categories';
+    }
+    case 'categories':
+      return '/categories';
+    case 'cart':
+      return '/cart';
+    case 'login':
+      return '/login';
+    case 'profile':
+      return '/profile';
+    case 'search':
+      return query ? `/search?q=${encodeURIComponent(query)}` : '/search';
+    case 'onepager':
+      return '/onepager';
+    default:
+      return '/';
+  }
+};
+
 // Normalize a product from the API response to match the frontend Product type
 const normalizeProduct = (p: any): Product => {
   const price = Number(p.price || 0);
@@ -37,9 +180,14 @@ const normalizeProduct = (p: any): Product => {
   const isOutOfStock = !inStock || stockQuantity <= 0;
   const isLowStock = inStock && stockQuantity > 0 && stockQuantity <= lowStockThreshold;
 
+  const productCode = p.product_code || p.productCode || (p.id ? String(p.id) : undefined);
+  const slug = p.slug || (p.name ? p.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : productCode);
+
   return {
     ...p,
-    id: String(p.id || p.product_code || p.slug || Math.random()),
+    id: String(p.id || productCode || slug || Math.random()),
+    product_code: productCode,
+    slug: slug,
     name: p.name || 'Fresh Seafood',
     category: typeof p.category === 'object' && p.category !== null ? p.category.slug || p.category.name : (p.category || 'fish-seafood'),
     subCategory: p.subCategory || p.sub_category || 'Fresh Fish',
@@ -83,11 +231,12 @@ interface AppContextType {
   theme: 'light' | 'dark';
   toggleTheme: () => void;
   currentPage: PageId;
-  navigateTo: (page: PageId, productId?: string, productData?: Product) => void;
+  navigateTo: (page: PageId, productId?: string, productData?: Product, categorySlug?: string) => void;
   navigationHistory: PageId[];
   goBack: () => void;
   selectedProductId: string | null;
   selectedProduct: Product | null;
+  isLoadingSingleProduct: boolean;
   
   // Dynamic Lists
   products: Product[];
@@ -130,9 +279,12 @@ interface AppContextType {
   clearCart: () => void;
   getCartQuantity: (productId: string) => number;
   totalCartItems: number;
+  cartCount: number;
   subtotalAmount: number;
+  cartSubtotal: number;
   deliveryFee: number;
   totalAmount: number;
+  cartTotal: number;
   couponCode: string;
   applyCoupon: (code: string) => boolean;
   discountAmount: number;
@@ -188,34 +340,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return (saved as 'light' | 'dark') || 'light';
   });
 
-  // Routing state
-  const [currentPage, setCurrentPage] = useState<PageId>(() => {
-    if (typeof window !== 'undefined') {
-      const search = window.location.search;
-      const hash = window.location.hash;
-      const path = window.location.pathname;
-      const params = new URLSearchParams(search);
-      const pageParam = params.get('page');
-      
-      if (
-        pageParam === 'onepager' || 
-        hash === '#onepager' || 
-        path === '/onepager' || 
-        params.get('ad') === 'fb' || 
-        params.has('fbclid')
-      ) {
-        return 'onepager';
-      }
-      
-      if (pageParam && ['home', 'product-details', 'cart', 'profile', 'login', 'category-view', 'categories', 'search', 'onepager'].includes(pageParam)) {
-        return pageParam as PageId;
-      }
-    }
-    return 'home';
-  });
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  // Routing state parsed from initial URL (pathname, search or hash)
+  const initialRoute = parseLocationToRoute();
+  const [currentPage, setCurrentPage] = useState<PageId>(initialRoute.page);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(initialRoute.productId);
   const [selectedProductData, setSelectedProductData] = useState<Product | null>(null);
-  const [navigationHistory, setNavigationHistory] = useState<PageId[]>(['home']);
+  const [navigationHistory, setNavigationHistory] = useState<PageId[]>([initialRoute.page]);
+  const [isLoadingSingleProduct, setIsLoadingSingleProduct] = useState<boolean>(false);
 
   // Pincode & Location State
   const [activePincode, setActivePincode] = useState<string>(() => {
@@ -446,8 +577,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [showOrderSuccessModal, setShowOrderSuccessModal] = useState(false);
 
   // Search & Categories State
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>(initialRoute.query || '');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(initialRoute.category);
   const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
   const [activeHeroIndex, setActiveHeroIndex] = useState<number>(0);
 
@@ -720,33 +851,146 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
   };
 
-  const navigateTo = (page: PageId, productId?: string, productData?: Product) => {
-    if (productId) {
-      setSelectedProductId(productId);
+  const navigateTo = (
+    page: PageId,
+    productId?: string,
+    productData?: Product,
+    categorySlug?: string
+  ) => {
+    if (productId !== undefined) {
+      setSelectedProductId(productId || null);
     }
-    if (productData) {
-      setSelectedProductData(productData);
+    if (productData !== undefined) {
+      setSelectedProductData(productData || null);
+    }
+    if (categorySlug !== undefined) {
+      setSelectedCategory(categorySlug || null);
     }
     if (page === 'home') {
       setSelectedCategory(null);
       setSelectedSubCategory(null);
     }
+
+    const activeCat = categorySlug !== undefined ? categorySlug : (page === 'category-view' ? (categorySlug || selectedCategory) : null);
+    const targetUrl = buildUrlForRoute(
+      page,
+      productId !== undefined ? productId : selectedProductId,
+      productData !== undefined ? productData : selectedProductData,
+      activeCat,
+      page === 'search' ? searchQuery : null
+    );
+
+    if (typeof window !== 'undefined') {
+      const currentUrl = window.location.pathname + window.location.search;
+      if (currentUrl !== targetUrl) {
+        window.history.pushState(
+          { page, productId: productId || null, category: activeCat },
+          '',
+          targetUrl
+        );
+      }
+    }
+
     setCurrentPage(page);
     setNavigationHistory(prev => [...prev, page]);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const goBack = () => {
-    if (navigationHistory.length > 1) {
-      const updatedHistory = [...navigationHistory];
-      updatedHistory.pop();
-      const prevPage = updatedHistory[updatedHistory.length - 1];
-      setNavigationHistory(updatedHistory);
-      setCurrentPage(prevPage);
+    if (typeof window !== 'undefined' && window.history.length > 1 && navigationHistory.length > 1) {
+      window.history.back();
     } else {
-      setCurrentPage('home');
+      navigateTo('home');
     }
   };
+
+  // Sync browser Back/Forward navigation with state
+  useEffect(() => {
+    const handlePopState = () => {
+      const route = parseLocationToRoute();
+      setCurrentPage(route.page);
+      if (route.productId) {
+        setSelectedProductId(route.productId);
+      }
+      if (route.category) {
+        setSelectedCategory(route.category);
+      }
+      if (route.query !== null) {
+        setSearchQuery(route.query);
+      }
+      setNavigationHistory(prev => [...prev, route.page]);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Normalize initial URL if it has old-style query params or hashes
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const route = parseLocationToRoute();
+    const cleanUrl = buildUrlForRoute(
+      route.page,
+      route.productId,
+      null,
+      route.category,
+      route.query
+    );
+    if (
+      window.location.search.includes('page=') ||
+      window.location.search.includes('product=') ||
+      window.location.hash === '#onepager'
+    ) {
+      window.history.replaceState({ page: route.page, productId: route.productId }, '', cleanUrl);
+    }
+  }, []);
+
+  // Fetch product directly by slug or ID when product-details page is requested directly
+  useEffect(() => {
+    if (currentPage === 'product-details' && selectedProductId) {
+      // Check if we already have matching product data loaded
+      if (
+        selectedProductData &&
+        (selectedProductData.slug === selectedProductId ||
+          String(selectedProductData.id) === selectedProductId ||
+          (selectedProductData as any).product_code === selectedProductId)
+      ) {
+        return;
+      }
+
+      // Check if present in the loaded products list
+      const match = products.find(
+        p =>
+          p.slug === selectedProductId ||
+          String(p.id) === selectedProductId ||
+          (p as any).product_code === selectedProductId
+      );
+      if (match) {
+        setSelectedProductData(match);
+        return;
+      }
+
+      // If products list has already finished loading or if not found, fetch single product from API
+      setIsLoadingSingleProduct(true);
+      fetch(`${API_BASE_URL}/products/${encodeURIComponent(selectedProductId)}`)
+        .then(res => {
+          if (!res.ok) throw new Error('Product not found');
+          return res.json();
+        })
+        .then(data => {
+          if (data && (data.id || data.name)) {
+            setSelectedProductData(normalizeProduct(data));
+          }
+        })
+        .catch(err => {
+          console.warn('Could not load product directly:', selectedProductId, err);
+        })
+        .finally(() => {
+          setIsLoadingSingleProduct(false);
+        });
+    }
+  }, [currentPage, selectedProductId, products]);
 
   // Use directly stored product data first, then fall back to products array lookup
   const selectedProduct = selectedProductData 
@@ -1043,6 +1287,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         goBack,
         selectedProductId,
         selectedProduct,
+        isLoadingSingleProduct,
         products,
         categories,
         slides,

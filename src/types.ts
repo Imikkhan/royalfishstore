@@ -1,5 +1,7 @@
 export interface Product {
   id: string;
+  slug?: string;
+  product_code?: string;
   name: string;
   category: string;
   subCategory?: string;

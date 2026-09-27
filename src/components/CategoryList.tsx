@@ -15,7 +15,7 @@ export const TopCategoryTabs: React.FC = () => {
     } else {
       setSelectedCategory(catId);
       setSelectedSubCategory(null);
-      navigateTo('category-view');
+      navigateTo('category-view', undefined, undefined, catId || undefined);
     }
   };
 
@@ -95,7 +95,7 @@ export const CategoryList: React.FC = () => {
 
     setSelectedCategory(parentSlug);
     setSelectedSubCategory(subCat.name);
-    navigateTo('category-view');
+    navigateTo('category-view', undefined, undefined, parentSlug);
   };
 
   return (
