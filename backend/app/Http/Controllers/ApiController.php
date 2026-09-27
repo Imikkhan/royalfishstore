@@ -1296,14 +1296,19 @@ class ApiController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(function ($v) {
+                    $yId = AdminController::parseYoutubeId($v->youtube_id ?: $v->youtube_url) ?: $v->youtube_id;
+                    $thumb = $v->thumbnail;
+                    if (empty($thumb) || strpos($thumb, 'img.youtube.com/vi/http') !== false) {
+                        $thumb = $yId ? "https://img.youtube.com/vi/{$yId}/hqdefault.jpg" : null;
+                    }
                     return [
                         'id' => (string)$v->id,
                         'title' => $v->title,
                         'youtubeUrl' => $v->youtube_url,
                         'youtube_url' => $v->youtube_url,
-                        'youtubeId' => $v->youtube_id,
-                        'youtube_id' => $v->youtube_id,
-                        'thumbnail' => $v->thumbnail ?: "https://img.youtube.com/vi/{$v->youtube_id}/hqdefault.jpg",
+                        'youtubeId' => $yId,
+                        'youtube_id' => $yId,
+                        'thumbnail' => $thumb,
                         'duration' => $v->duration ?: '1:00',
                     ];
                 });

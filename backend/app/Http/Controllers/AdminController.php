@@ -1793,18 +1793,50 @@ class AdminController extends Controller
     }
 
     /**
-     * Helper to extract YouTube Video ID from any URL format
+     * Helper to extract clean 11-char YouTube Video ID from any URL format
+     * Supports: shorts, youtu.be, watch?v=, embed, live, and direct ID
      */
-    private function parseYoutubeId($url)
+    public static function parseYoutubeId($url)
     {
-        $url = trim($url);
-        if (preg_match('/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/', $url, $matches)) {
-            return $matches[1];
+        if (empty($url)) return null;
+        $str = trim((string)$url);
+
+        // 1. Direct 11-char ID
+        if (preg_match('/^[a-zA-Z0-9_-]{11}$/', $str)) {
+            return $str;
         }
-        if (preg_match('/^[a-zA-Z0-9_-]{11}$/', $url)) {
-            return $url;
+
+        // 2. youtube.com/shorts/:id or youtu.be/shorts/:id
+        if (preg_match('/(?:youtube\.com|youtu\.be)\/shorts\/([a-zA-Z0-9_-]{11})/i', $str, $m)) {
+            return $m[1];
         }
-        return $url;
+
+        // 3. youtu.be/:id (short link)
+        if (preg_match('/youtu\.be\/([a-zA-Z0-9_-]{11})/i', $str, $m)) {
+            return $m[1];
+        }
+
+        // 4. youtube.com/watch?v=:id or &v=:id
+        if (preg_match('/[?&]v=([a-zA-Z0-9_-]{11})/i', $str, $m)) {
+            return $m[1];
+        }
+
+        // 5. youtube.com/embed/:id or /v/:id or /live/:id
+        if (preg_match('/(?:embed|v|live)\/([a-zA-Z0-9_-]{11})/i', $str, $m)) {
+            return $m[1];
+        }
+
+        // 6. Generic regex fallback
+        if (preg_match('/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i', $str, $m)) {
+            return $m[1];
+        }
+
+        // 7. Last resort: extract any 11-character token
+        if (preg_match('/([a-zA-Z0-9_-]{11})/', $str, $m)) {
+            return $m[1];
+        }
+
+        return null;
     }
 
     /**
@@ -1829,8 +1861,18 @@ class AdminController extends Controller
             'youtube_url' => 'required|string',
         ]);
 
-        $youtubeId = $this->parseYoutubeId($request->youtube_url);
-        $thumbnail = $request->thumbnail ?: "https://img.youtube.com/vi/{$youtubeId}/hqdefault.jpg";
+        $youtubeId = self::parseYoutubeId($request->youtube_url);
+        if (!$youtubeId) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Invalid YouTube link or ID provided. Please enter a valid YouTube Shorts, Watch or Short link.'
+            ], 422);
+        }
+
+        $thumbnail = $request->thumbnail;
+        if (empty($thumbnail) || strpos($thumbnail, 'img.youtube.com/vi/http') !== false) {
+            $thumbnail = "https://img.youtube.com/vi/{$youtubeId}/hqdefault.jpg";
+        }
 
         $video = Video::create([
             'title' => $request->title,
@@ -1859,8 +1901,18 @@ class AdminController extends Controller
             'youtube_url' => 'required|string',
         ]);
 
-        $youtubeId = $this->parseYoutubeId($request->youtube_url);
-        $thumbnail = $request->thumbnail ?: "https://img.youtube.com/vi/{$youtubeId}/hqdefault.jpg";
+        $youtubeId = self::parseYoutubeId($request->youtube_url);
+        if (!$youtubeId) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Invalid YouTube link or ID provided. Please enter a valid YouTube Shorts, Watch or Short link.'
+            ], 422);
+        }
+
+        $thumbnail = $request->thumbnail;
+        if (empty($thumbnail) || strpos($thumbnail, 'img.youtube.com/vi/http') !== false) {
+            $thumbnail = "https://img.youtube.com/vi/{$youtubeId}/hqdefault.jpg";
+        }
 
         $video->update([
             'title' => $request->title,

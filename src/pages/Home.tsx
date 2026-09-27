@@ -42,6 +42,23 @@ const CUSTOMER_REVIEWS = [
   }
 ];
 
+// Robust extractor for YouTube video ID (supports Shorts, short links youtu.be, watch?v=, embed, etc.)
+const extractYoutubeId = (urlOrId: string | undefined | null): string => {
+  if (!urlOrId) return 'LXb3EKWsInQ';
+  const str = String(urlOrId).trim();
+  if (/^[a-zA-Z0-9_-]{11}$/.test(str)) return str;
+  const shortsMatch = str.match(/(?:youtube\.com|youtu\.be)\/shorts\/([a-zA-Z0-9_-]{11})/i);
+  if (shortsMatch) return shortsMatch[1];
+  const youtuBeMatch = str.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/i);
+  if (youtuBeMatch) return youtuBeMatch[1];
+  const watchMatch = str.match(/[?&]v=([a-zA-Z0-9_-]{11})/i);
+  if (watchMatch) return watchMatch[1];
+  const embedMatch = str.match(/(?:embed|v|live)\/([a-zA-Z0-9_-]{11})/i);
+  if (embedMatch) return embedMatch[1];
+  const generic = str.match(/([a-zA-Z0-9_-]{11})/);
+  return generic ? generic[1] : 'LXb3EKWsInQ';
+};
+
 export const Home: React.FC = () => {
   const { searchQuery, navigateTo, products, isLoadingProducts, videos } = useApp();
   const [activeVideoModal, setActiveVideoModal] = React.useState<any | null>(null);
@@ -242,8 +259,10 @@ export const Home: React.FC = () => {
 
               <div className="flex flex-row overflow-x-auto gap-3.5 pb-2.5 scrollbar-none snap-x snap-mandatory sm:grid sm:grid-cols-4 sm:overflow-x-visible">
                 {displayVideos.map(vid => {
-                  const yId = vid.youtubeId || vid.youtube_id || 'LXb3EKWsInQ';
-                  const thumb = vid.thumbnail || `https://img.youtube.com/vi/${yId}/hqdefault.jpg`;
+                  const yId = extractYoutubeId(vid.youtubeId || vid.youtube_id || vid.youtubeUrl || vid.youtube_url);
+                  const thumb = (vid.thumbnail && !vid.thumbnail.includes('img.youtube.com/vi/http'))
+                    ? vid.thumbnail
+                    : `https://img.youtube.com/vi/${yId}/hqdefault.jpg`;
                   return (
                     <div 
                       key={vid.id} 
@@ -251,7 +270,14 @@ export const Home: React.FC = () => {
                       className="w-[70vw] max-w-[280px] sm:w-auto shrink-0 snap-start space-y-1.5 group cursor-pointer"
                     >
                       <div className="relative aspect-video w-full rounded-2xl overflow-hidden shadow-xs bg-gray-900 border border-gray-100">
-                        <img src={thumb} alt={vid.title} className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-300" />
+                        <img 
+                          src={thumb} 
+                          alt={vid.title} 
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = `https://img.youtube.com/vi/${yId}/mqdefault.jpg`;
+                          }}
+                          className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-300" 
+                        />
                         {/* Play icon overlay */}
                         <div className="absolute inset-0 flex items-center justify-center">
                           <div className="w-10 h-10 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
@@ -380,13 +406,18 @@ export const Home: React.FC = () => {
               </button>
             </div>
             <div className="relative aspect-video w-full bg-black">
-              <iframe
-                src={`https://www.youtube.com/embed/${activeVideoModal.youtubeId || activeVideoModal.youtube_id || 'LXb3EKWsInQ'}?autoplay=1`}
-                title={activeVideoModal.title}
-                className="w-full h-full border-0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
+              {(() => {
+                const modalYId = extractYoutubeId(activeVideoModal.youtubeId || activeVideoModal.youtube_id || activeVideoModal.youtubeUrl || activeVideoModal.youtube_url);
+                return (
+                  <iframe
+                    src={`https://www.youtube.com/embed/${modalYId}?autoplay=1&rel=0`}
+                    title={activeVideoModal.title}
+                    className="w-full h-full border-0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                );
+              })()}
             </div>
           </div>
         </div>

@@ -35,10 +35,17 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-xs text-slate-700 dark:text-slate-300">
                     @foreach($videos as $video)
+                    @php
+                        $cleanYId = \App\Http\Controllers\AdminController::parseYoutubeId($video->youtube_id ?: $video->youtube_url) ?: $video->youtube_id;
+                        $cleanThumb = $video->thumbnail;
+                        if (empty($cleanThumb) || strpos($cleanThumb, 'img.youtube.com/vi/http') !== false) {
+                            $cleanThumb = $cleanYId ? "https://img.youtube.com/vi/{$cleanYId}/hqdefault.jpg" : 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80';
+                        }
+                    @endphp
                     <tr data-id="{{ $video->id }}">
                         <td class="py-3 px-4">
                             <div class="relative w-24 aspect-video rounded-xl overflow-hidden bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-xs">
-                                <img src="{{ $video->thumbnail }}" alt="{{ $video->title }}" class="w-full h-full object-cover">
+                                <img src="{{ $cleanThumb }}" alt="{{ $video->title }}" class="w-full h-full object-cover" onerror="this.src='https://img.youtube.com/vi/{{ $cleanYId }}/mqdefault.jpg'">
                                 <div class="absolute inset-0 flex items-center justify-center bg-black/30">
                                     <i class="fa-solid fa-play text-white text-xs"></i>
                                 </div>
@@ -49,7 +56,7 @@
                         </td>
                         <td class="py-3 px-4">
                             <a href="{{ $video->youtube_url }}" target="_blank" class="text-red-600 dark:text-red-400 hover:underline font-mono font-medium flex items-center gap-1">
-                                <i class="fa-brands fa-youtube"></i> {{ $video->youtube_id }}
+                                <i class="fa-brands fa-youtube"></i> {{ $cleanYId }}
                             </a>
                         </td>
                         <td class="py-3 px-4 font-mono font-semibold">
@@ -102,9 +109,27 @@
             </div>
 
             <div>
-                <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5"><i class="fa-brands fa-youtube text-red-600 mr-1"></i> YouTube Video Link / ID</label>
-                <input type="text" id="video-url" required placeholder="https://www.youtube.com/watch?v=LXb3EKWsInQ or https://youtu.be/LXb3EKWsInQ" class="block w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm font-medium">
-                <p class="text-[11px] text-slate-400 mt-1">Paste any YouTube URL or Video ID. Thumbnail will be auto-generated.</p>
+                <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5"><i class="fa-brands fa-youtube text-red-600 mr-1"></i> YouTube Video Link / Shorts / ID</label>
+                <input type="text" id="video-url" required placeholder="https://www.youtube.com/shorts/3JZ_D3ELwOQ or https://youtu.be/3JZ_D3ELwOQ" class="block w-full px-4 py-3 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/20 text-sm font-medium">
+                <p class="text-[11px] text-slate-400 mt-1">Paste any YouTube URL, Shorts link or Video ID. Thumbnail is generated automatically in real-time.</p>
+                
+                <!-- Live Thumbnail & ID Preview Box -->
+                <div id="video-preview-box" class="hidden mt-3 p-3 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center gap-3">
+                    <div class="relative w-24 aspect-video rounded-xl overflow-hidden bg-black shrink-0 shadow-xs border border-slate-700/50">
+                        <img id="preview-thumbnail" src="" alt="Thumbnail preview" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 flex items-center justify-center bg-black/25">
+                            <i class="fa-solid fa-play text-white text-xs"></i>
+                        </div>
+                    </div>
+                    <div class="min-w-0 flex-1 text-xs">
+                        <span class="inline-flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md text-[10px]">
+                            <i class="fa-solid fa-circle-check"></i> Valid Video Detected
+                        </span>
+                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 truncate">
+                            Video ID: <span id="preview-ytid" class="font-mono font-bold text-slate-900 dark:text-white"></span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
@@ -148,11 +173,46 @@
 
         const modal = $('#video-modal');
 
+        function extractYoutubeId(input) {
+            if (!input) return null;
+            const str = String(input).trim();
+            if (/^[a-zA-Z0-9_-]{11}$/.test(str)) return str;
+            const shortsMatch = str.match(/(?:youtube\.com|youtu\.be)\/shorts\/([a-zA-Z0-9_-]{11})/i);
+            if (shortsMatch) return shortsMatch[1];
+            const youtuBeMatch = str.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/i);
+            if (youtuBeMatch) return youtuBeMatch[1];
+            const watchMatch = str.match(/[?&]v=([a-zA-Z0-9_-]{11})/i);
+            if (watchMatch) return watchMatch[1];
+            const embedMatch = str.match(/(?:embed|v|live)\/([a-zA-Z0-9_-]{11})/i);
+            if (embedMatch) return embedMatch[1];
+            const generic = str.match(/([a-zA-Z0-9_-]{11})/);
+            return generic ? generic[1] : null;
+        }
+
+        function updateVideoPreview() {
+            const val = $('#video-url').val();
+            const yId = extractYoutubeId(val);
+            if (yId) {
+                const customThumb = $('#video-thumbnail').val().trim();
+                const thumbUrl = (customThumb && !customThumb.includes('img.youtube.com/vi/http')) 
+                    ? customThumb 
+                    : `https://img.youtube.com/vi/${yId}/hqdefault.jpg`;
+                $('#preview-thumbnail').attr('src', thumbUrl);
+                $('#preview-ytid').text(yId);
+                $('#video-preview-box').removeClass('hidden');
+            } else {
+                $('#video-preview-box').addClass('hidden');
+            }
+        }
+
+        $('#video-url, #video-thumbnail').on('input change paste keyup', updateVideoPreview);
+
         $('#btn-add-video').click(function() {
             $('#modal-title').text('Add YouTube Video');
             $('#video-id').val('');
             $('#video-form')[0].reset();
             $('#video-active').prop('checked', true);
+            updateVideoPreview();
             modal.removeClass('hidden');
         });
 
@@ -171,6 +231,7 @@
             $('#video-duration').val(btn.data('duration'));
             $('#video-order').val(btn.data('order'));
             $('#video-active').prop('checked', btn.data('active') == 1);
+            updateVideoPreview();
             modal.removeClass('hidden');
         });
 
