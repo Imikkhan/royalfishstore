@@ -4,7 +4,7 @@ import { HeroSlider } from '../components/HeroSlider';
 import { TopCategoryTabs, CategoryList } from '../components/CategoryList';
 import { ProductCard } from '../components/ProductCard';
 import { SkeletonProductGrid } from '../components/SkeletonLoader';
-import { Sparkles, ArrowRight, Star, Play, Gift } from 'lucide-react';
+import { Sparkles, ArrowRight, Star, Play, Gift, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const VIDEOS = [
   {
@@ -64,6 +64,52 @@ export const Home: React.FC = () => {
   const [activeVideoModal, setActiveVideoModal] = React.useState<any | null>(null);
 
   const displayVideos = videos && videos.length > 0 ? videos : VIDEOS;
+  const videoScrollRef = React.useRef<HTMLDivElement>(null);
+  const [isVideoPaused, setIsVideoPaused] = React.useState(false);
+
+  // Build repeated list for seamless infinite loop
+  const repeatedVideos = React.useMemo(() => {
+    if (!displayVideos || displayVideos.length === 0) return [];
+    let list = [...displayVideos];
+    while (list.length < 8) {
+      list = [...list, ...displayVideos];
+    }
+    // Duplicate to form seamless continuous loop
+    return [...list, ...list];
+  }, [displayVideos]);
+
+  // Smooth continuous auto-scroll loop (pauses on hover or touch)
+  React.useEffect(() => {
+    const el = videoScrollRef.current;
+    if (!el || repeatedVideos.length === 0) return;
+
+    let animId: number;
+    const speed = 0.85; // smooth gentle auto-scroll speed
+
+    const scrollStep = () => {
+      if (!isVideoPaused && el) {
+        el.scrollLeft += speed;
+        const halfWidth = el.scrollWidth / 2;
+        if (el.scrollLeft >= halfWidth) {
+          el.scrollLeft -= halfWidth;
+        }
+      }
+      animId = requestAnimationFrame(scrollStep);
+    };
+
+    animId = requestAnimationFrame(scrollStep);
+    return () => cancelAnimationFrame(animId);
+  }, [isVideoPaused, repeatedVideos.length]);
+
+  const scrollVideos = (direction: 'left' | 'right') => {
+    if (videoScrollRef.current) {
+      const scrollAmount = 260;
+      videoScrollRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   // Filter products based on search query
   const filteredProducts = products.filter(product => {
@@ -245,53 +291,104 @@ export const Home: React.FC = () => {
               </div>
             </div>
 
-            {/* 7. Our Videos Section */}
+            {/* 7. Our Videos Section - Vertical Shorts Auto-scroll Carousel (Inspired by Moral Jewels) */}
             {displayVideos.length > 0 && (
-            <div className="space-y-3">
+            <div className="space-y-3.5 select-none">
               <div className="flex items-center justify-between">
-                <h3 className="font-sans font-extrabold text-gray-900 text-base sm:text-lg">
-                  Our Videos
-                </h3>
-                <span className="text-xs font-bold text-[#fc490f]">
-                  {displayVideos.length} Videos
-                </span>
+                <div>
+                  <h3 className="font-sans font-extrabold text-gray-900 dark:text-white text-base sm:text-lg flex items-center gap-2">
+                    <span>Our Videos</span>
+                    <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
+                  </h3>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    Watch fresh catch stories & behind the scenes
+                  </p>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-[#fc490f] hidden sm:inline-block">
+                    {displayVideos.length} Videos
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button 
+                      onClick={() => scrollVideos('left')}
+                      className="w-8 h-8 rounded-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-xs flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                      aria-label="Previous videos"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => scrollVideos('right')}
+                      className="w-8 h-8 rounded-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-xs flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                      aria-label="Next videos"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              <div className="flex flex-row overflow-x-auto gap-3.5 pb-2.5 scrollbar-none snap-x snap-mandatory sm:grid sm:grid-cols-4 sm:overflow-x-visible">
-                {displayVideos.map(vid => {
+              {/* Horizontal Infinite Auto-scroll Container */}
+              <div 
+                ref={videoScrollRef}
+                onMouseEnter={() => setIsVideoPaused(true)}
+                onMouseLeave={() => setIsVideoPaused(false)}
+                onTouchStart={() => setIsVideoPaused(true)}
+                onTouchEnd={() => setTimeout(() => setIsVideoPaused(false), 2500)}
+                className="flex flex-row overflow-x-auto gap-3.5 sm:gap-4 pb-3 pt-1 scrollbar-none cursor-grab active:cursor-grabbing"
+              >
+                {repeatedVideos.map((vid, idx) => {
                   const yId = extractYoutubeId(vid.youtubeId || vid.youtube_id || vid.youtubeUrl || vid.youtube_url);
                   const thumb = (vid.thumbnail && !vid.thumbnail.includes('img.youtube.com/vi/http'))
                     ? vid.thumbnail
                     : `https://img.youtube.com/vi/${yId}/hqdefault.jpg`;
+
                   return (
                     <div 
-                      key={vid.id} 
+                      key={`${vid.id || yId}-${idx}`} 
                       onClick={() => setActiveVideoModal(vid)}
-                      className="w-[70vw] max-w-[280px] sm:w-auto shrink-0 snap-start space-y-1.5 group cursor-pointer"
+                      className="w-[155px] sm:w-[195px] md:w-[220px] aspect-[9/16] shrink-0 rounded-3xl overflow-hidden relative shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-1.5 group cursor-pointer bg-slate-950 border border-slate-200/80 dark:border-slate-800"
                     >
-                      <div className="relative aspect-video w-full rounded-2xl overflow-hidden shadow-xs bg-gray-900 border border-gray-100">
-                        <img 
-                          src={thumb} 
-                          alt={vid.title} 
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = `https://img.youtube.com/vi/${yId}/mqdefault.jpg`;
-                          }}
-                          className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-300" 
-                        />
-                        {/* Play icon overlay */}
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-10 h-10 rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                            <Play className="w-5 h-5 fill-current ml-0.5" />
-                          </div>
+                      {/* Full-bleed Thumbnail Image */}
+                      <img 
+                        src={thumb} 
+                        alt={vid.title} 
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = `https://img.youtube.com/vi/${yId}/mqdefault.jpg`;
+                        }}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                      />
+
+                      {/* Top Dark Vignette Gradient */}
+                      <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/80 via-black/30 to-transparent pointer-events-none p-3.5 flex flex-col justify-between">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="inline-flex items-center gap-1 bg-red-600/90 text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full shadow-xs">
+                            <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
+                            Shorts
+                          </span>
+                          <span className="bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-full border border-white/20">
+                            {vid.duration || '1:00'}
+                          </span>
                         </div>
-                        {/* Duration badge */}
-                        <span className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                          {vid.duration || '1:00'}
-                        </span>
+                        <h4 className="text-white text-xs font-bold line-clamp-2 leading-tight drop-shadow-md">
+                          {vid.title}
+                        </h4>
                       </div>
-                      <h4 className="text-xs font-bold text-gray-800 line-clamp-2 leading-tight group-hover:text-red-600 transition-colors">
-                        {vid.title}
-                      </h4>
+
+                      {/* Center Play Button Pulse on Hover */}
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                        <div className="w-12 h-12 rounded-full bg-[#fc490f]/90 text-white flex items-center justify-center shadow-xl scale-90 group-hover:scale-100 transition-transform">
+                          <Play className="w-5 h-5 fill-current ml-0.5" />
+                        </div>
+                      </div>
+
+                      {/* Bottom Dark Vignette Gradient + "Tap to view" Glass Pill (Moral Jewels signature look) */}
+                      <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none flex items-end justify-center pb-4 px-3">
+                        <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-white text-[11px] font-semibold border border-white/25 shadow-lg group-hover:bg-[#fc490f] group-hover:border-[#fc490f] group-hover:scale-105 transition-all duration-300 pointer-events-auto">
+                          <Play className="w-3 h-3 fill-current text-white ml-0.5" />
+                          <span>Tap to view</span>
+                        </div>
+                      </div>
                     </div>
                   );
                 })}
@@ -387,14 +484,20 @@ export const Home: React.FC = () => {
         )}
       </div>
 
-      {/* YouTube Video Player Modal */}
+      {/* YouTube Video Player Modal (Vertical Shorts & Reel Format) */}
       {activeVideoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fadeIn">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-3xl w-full overflow-hidden shadow-2xl relative my-auto">
-            <div className="p-4 bg-slate-950 flex items-center justify-between border-b border-slate-800">
+        <div 
+          onClick={() => setActiveVideoModal(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-fadeIn"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-slate-900 border border-slate-800 rounded-3xl max-w-xs sm:max-w-sm w-full overflow-hidden shadow-2xl relative my-auto flex flex-col"
+          >
+            <div className="p-3.5 bg-slate-950 flex items-center justify-between border-b border-slate-800">
               <div className="flex items-center gap-2 min-w-0">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse"></span>
-                <h3 className="font-extrabold text-white text-sm sm:text-base truncate pr-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse shrink-0"></span>
+                <h3 className="font-extrabold text-white text-xs sm:text-sm truncate pr-2">
                   {activeVideoModal.title}
                 </h3>
               </div>
@@ -405,7 +508,7 @@ export const Home: React.FC = () => {
                 ✕
               </button>
             </div>
-            <div className="relative aspect-video w-full bg-black">
+            <div className="relative aspect-[9/16] max-h-[75vh] w-full bg-black mx-auto">
               {(() => {
                 const modalYId = extractYoutubeId(activeVideoModal.youtubeId || activeVideoModal.youtube_id || activeVideoModal.youtubeUrl || activeVideoModal.youtube_url);
                 return (
