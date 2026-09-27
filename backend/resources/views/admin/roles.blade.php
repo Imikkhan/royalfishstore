@@ -87,6 +87,9 @@
                         <input type="checkbox" name="permissions[]" value="logistics" class="rounded border-slate-300 text-red-600"> Logistics & Shipping
                     </label>
                     <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer">
+                        <input type="checkbox" name="permissions[]" value="delivery_pincodes" class="rounded border-slate-300 text-emerald-600"> Delivery Pincodes
+                    </label>
+                    <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer">
                         <input type="checkbox" name="permissions[]" value="media" class="rounded border-slate-300 text-red-600"> Media Manager
                     </label>
                     <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 cursor-pointer">

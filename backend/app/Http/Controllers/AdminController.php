@@ -15,6 +15,7 @@ use App\Models\Media;
 use App\Models\Slide;
 use App\Models\Rider;
 use App\Models\Video;
+use App\Models\DeliveryPincode;
 use App\Models\OtpVerification;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
@@ -1906,5 +1907,140 @@ class AdminController extends Controller
         $video->save();
 
         return response()->json(['success' => true, 'message' => 'Video status updated.', 'is_active' => $video->is_active]);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | DELIVERY PINCODES / SERVICEABILITY MANAGEMENT
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Admins with pincode, logistics, settings or full access may manage delivery pincodes.
+     */
+    private function canManageDeliveryPincodes(): bool
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return false;
+        }
+
+        return $user->hasPermission('delivery_pincodes')
+            || $user->hasPermission('logistics')
+            || $user->hasPermission('settings')
+            || $user->hasPermission('*');
+    }
+
+    /**
+     * List all serviceable delivery pincodes.
+     */
+    public function deliveryPincodesIndex(Request $request)
+    {
+        if (!$this->canManageDeliveryPincodes()) abort(403);
+
+        $pincodes = DeliveryPincode::orderBy('sort_order', 'asc')->orderBy('pincode', 'asc')->get();
+
+        return view('admin.delivery_pincodes', compact('pincodes'));
+    }
+
+    /**
+     * Add a new serviceable delivery pincode.
+     */
+    public function deliveryPincodesStore(Request $request)
+    {
+        if (!$this->canManageDeliveryPincodes()) abort(403);
+
+        $request->merge(['pincode' => preg_replace('/\D/', '', (string)$request->pincode)]);
+
+        $request->validate([
+            'pincode' => 'required|digits:6|unique:delivery_pincodes,pincode',
+            'area_name' => 'nullable|string|max:255',
+        ]);
+
+        $pincode = DeliveryPincode::create([
+            'pincode' => $request->pincode,
+            'area_name' => $request->area_name ?: null,
+            'is_active' => $request->has('is_active') ? (bool)$request->is_active : true,
+            'sort_order' => $request->sort_order !== null && $request->sort_order !== ''
+                ? (int)$request->sort_order
+                : ((int)DeliveryPincode::max('sort_order') + 1),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Serviceable pincode added successfully!',
+            'pincode' => $pincode
+        ]);
+    }
+
+    /**
+     * Update an existing serviceable delivery pincode.
+     */
+    public function deliveryPincodesUpdate(Request $request, $id)
+    {
+        if (!$this->canManageDeliveryPincodes()) abort(403);
+
+        $row = DeliveryPincode::findOrFail($id);
+
+        $request->merge(['pincode' => preg_replace('/\D/', '', (string)$request->pincode)]);
+
+        $request->validate([
+            'pincode' => 'required|digits:6|unique:delivery_pincodes,pincode,' . $row->id,
+            'area_name' => 'nullable|string|max:255',
+        ]);
+
+        $row->update([
+            'pincode' => $request->pincode,
+            'area_name' => $request->area_name ?: null,
+            'is_active' => $request->has('is_active') ? (bool)$request->is_active : $row->is_active,
+            'sort_order' => $request->sort_order !== null && $request->sort_order !== ''
+                ? (int)$request->sort_order
+                : (int)$row->sort_order,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Serviceable pincode updated successfully!',
+            'pincode' => $row
+        ]);
+    }
+
+    /**
+     * Remove a serviceable delivery pincode.
+     */
+    public function deliveryPincodesDelete(Request $request)
+    {
+        if (!$this->canManageDeliveryPincodes()) abort(403);
+
+        $request->validate([
+            'id' => 'required|exists:delivery_pincodes,id',
+        ]);
+
+        DeliveryPincode::destroy($request->id);
+
+        return response()->json(['success' => true, 'message' => 'Serviceable pincode removed successfully!']);
+    }
+
+    /**
+     * Enable / disable a serviceable delivery pincode.
+     */
+    public function deliveryPincodesToggleStatus(Request $request)
+    {
+        if (!$this->canManageDeliveryPincodes()) abort(403);
+
+        $request->validate([
+            'id' => 'required|exists:delivery_pincodes,id',
+        ]);
+
+        $row = DeliveryPincode::findOrFail($request->id);
+        $row->is_active = !$row->is_active;
+        $row->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => $row->is_active ? 'Pincode enabled for delivery.' : 'Pincode disabled for delivery.',
+            'is_active' => $row->is_active
+        ]);
     }
 }

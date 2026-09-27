@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Product, CartItem, Address, Order, PageId, User, Slide, Video } from '../types';
+import { Product, CartItem, Address, Order, PageId, User, Slide, Video, DeliveryHub } from '../types';
 import { PRODUCTS, CATEGORIES, PROMO_SLIDES } from '../data/products';
 import { API_BASE_URL } from '../config';
 
@@ -99,10 +99,20 @@ interface AppContextType {
   minOrderAmount: number;
   freeDeliveryThreshold: number;
 
-  // Pincode Location State
+  // Pincode Location State (Admin-controlled serviceable pincodes)
   activePincode: string;
   setPincode: (pin: string) => void;
   serviceablePincodes: string[];
+  serviceableHubs: DeliveryHub[];
+  isLoadingPincodes: boolean;
+  pincodesError: string | null;
+  refreshServiceablePincodes: () => Promise<void>;
+  verifyPincode: (pin: string) => Promise<{
+    isServiceable: boolean;
+    status: 'serviceable' | 'coming_soon' | 'invalid';
+    areaName: string | null;
+    message: string;
+  }>;
   isPincodeServiceable: (pin: string, product?: Product) => boolean;
   isPincodeModalOpen: boolean;
   setIsPincodeModalOpen: (open: boolean) => void;
@@ -216,6 +226,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return '700135';
   });
   const [serviceablePincodes, setServiceablePincodes] = useState<string[]>([]);
+  const [serviceableHubs, setServiceableHubs] = useState<DeliveryHub[]>([]);
+  const [isLoadingPincodes, setIsLoadingPincodes] = useState<boolean>(true);
+  const [pincodesError, setPincodesError] = useState<string | null>(null);
+  // True once the admin has configured at least one pincode (backend is_configured flag)
+  const [arePincodesConfigured, setArePincodesConfigured] = useState<boolean>(false);
   const [isPincodeModalOpen, setIsPincodeModalOpen] = useState(false);
 
   // Dynamic Lists State — start empty so only API data is shown (skeleton shows while loading)
@@ -237,12 +252,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [isLoadingVideos, setIsLoadingVideos] = useState<boolean>(true);
 
-  // Helper to verify if a pincode is serviceable
+  // Helper to verify if a pincode is serviceable.
+  // The Admin-managed serviceable pincode list (from the backend) is the single source of truth.
   const isPincodeServiceable = (pin: string, product?: Product): boolean => {
     if (!pin) return false;
     const clean = pin.trim().replace(/\D/g, '');
     if (clean.length !== 6) return false;
 
+    // Per-product restriction check (product level delivery zones)
     if (product) {
       const pins = product.servicedPincodes;
       if (!pins || pins.length === 0) return false;
@@ -250,10 +267,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return pins.includes(clean);
     }
 
-    if (serviceablePincodes.length > 0) {
+    // Admin has configured serviceable pincodes → only those are deliverable
+    if (arePincodesConfigured) {
       return serviceablePincodes.includes(clean);
     }
 
+    // Admin has not configured any pincode yet → fall back to product level delivery zones
     if (products.length > 0) {
       return products.some(p => {
         const pins = p.servicedPincodes;
@@ -261,7 +280,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
     }
 
-    return true;
+    return false;
   };
 
   const setPincode = (pin: string) => {
@@ -270,19 +289,89 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem('royal-fish-pincode', clean);
   };
 
-  // Fetch unique serviceable pincodes from backend
+  // Fetch the Admin-controlled serviceable pincode list (called on load and every time the modal opens)
+  const refreshServiceablePincodes = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/serviceable-pincodes`);
+      if (!res.ok) throw new Error('Failed to load pincodes');
+
+      const data = await res.json();
+      const list: string[] = Array.isArray(data.serviceable_pincodes)
+        ? data.serviceable_pincodes.map((pin: any) => String(pin).trim()).filter(Boolean)
+        : [];
+      const hubs: DeliveryHub[] = Array.isArray(data.hubs) && data.hubs.length > 0
+        ? data.hubs.map((hub: any) => ({
+            pincode: String(hub.pincode || '').trim(),
+            areaName: hub.areaName || hub.area_name || null,
+            area_name: hub.area_name || hub.areaName || null,
+            isActive: hub.is_active !== undefined ? Boolean(hub.is_active) : true,
+            is_active: hub.is_active !== undefined ? Boolean(hub.is_active) : true,
+          })).filter((hub: DeliveryHub) => hub.pincode.length === 6)
+        : list.map(pin => ({ pincode: pin, areaName: null, area_name: null, isActive: true }));
+
+      setServiceablePincodes(list);
+      setServiceableHubs(hubs);
+      setArePincodesConfigured(data.is_configured !== undefined ? Boolean(data.is_configured) : list.length > 0);
+      setPincodesError(null);
+    } catch (err) {
+      setPincodesError('Unable to load our delivery areas right now. Please try again in a moment.');
+    } finally {
+      setIsLoadingPincodes(false);
+    }
+  };
+
+  // Authoritative server side validation (never trust the client)
+  const verifyPincode = async (pin: string) => {
+    const clean = pin.trim().replace(/\D/g, '');
+
+    if (clean.length !== 6) {
+      return {
+        isServiceable: false,
+        status: 'invalid' as const,
+        areaName: null,
+        message: 'Please enter a valid 6-digit Indian pincode (e.g. 700135).'
+      };
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/check-pincode`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pincode: clean })
+      });
+
+      if (!res.ok) throw new Error('Pincode check failed');
+
+      const data = await res.json();
+      const isServiceable = Boolean(data.isDeliverable);
+      const status: 'serviceable' | 'coming_soon' | 'invalid' =
+        data.status === 'invalid' ? 'invalid' : (isServiceable ? 'serviceable' : 'coming_soon');
+
+      return {
+        isServiceable,
+        status,
+        areaName: data.areaName || null,
+        message: data.message || (isServiceable
+          ? `Express delivery available for ${clean}`
+          : `We are not delivering to ${clean} yet. Please select one of our serviceable areas.`)
+      };
+    } catch (err) {
+      // Offline / API failure → fall back to the locally cached admin list
+      const localServiceable = isPincodeServiceable(clean);
+      return {
+        isServiceable: localServiceable,
+        status: localServiceable ? ('serviceable' as const) : ('coming_soon' as const),
+        areaName: null,
+        message: localServiceable
+          ? `Express delivery available for ${clean}`
+          : `We are not delivering to ${clean} yet. Please select one of our serviceable areas.`
+      };
+    }
+  };
+
+  // Load the serviceable pincodes once on app start
   useEffect(() => {
-    const fetchServiceable = () => {
-      fetch(`${API_BASE_URL}/serviceable-pincodes`)
-        .then(res => res.json())
-        .then(data => {
-          if (Array.isArray(data.serviceable_pincodes)) {
-            setServiceablePincodes(data.serviceable_pincodes.map(String));
-          }
-        })
-        .catch(() => {});
-    };
-    fetchServiceable();
+    refreshServiceablePincodes();
   }, []);
 
   // Cart State
@@ -859,6 +948,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
+    // Admin-controlled serviceability gate (backend also enforces this when the order is placed)
+    if (arePincodesConfigured && !serviceablePincodes.includes(deliveryPincode)) {
+      showToast(`Sorry, we are not delivering to pincode ${deliveryPincode} yet. Please choose one of our serviceable delivery pincodes.`, "warning");
+      return;
+    }
+
     // Check all cart items for serviceability to deliveryPincode
     const undeliverableItems = cart.filter(item => {
       const pins = item.product.servicedPincodes;
@@ -957,6 +1052,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         activePincode,
         setPincode,
         serviceablePincodes,
+        serviceableHubs,
+        isLoadingPincodes,
+        pincodesError,
+        refreshServiceablePincodes,
+        verifyPincode,
         isPincodeServiceable,
         isPincodeModalOpen,
         setIsPincodeModalOpen,

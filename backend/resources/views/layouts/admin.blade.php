@@ -314,6 +314,12 @@
             </a>
             @endif
 
+            @if($hasPerm('delivery_pincodes') || $hasPerm('logistics') || $hasPerm('settings') || $hasPerm('*'))
+            <a href="{{ url('/admin/delivery-pincodes') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ Str::startsWith($route, 'admin/delivery-pincodes') ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
+                <i class="fa-solid fa-map-location-dot w-5 text-emerald-400"></i> <span class="sidebar-text">Delivery Pincodes</span>
+            </a>
+            @endif
+
             @if($hasPerm('media') || $hasPerm('*'))
             <a href="{{ url('/admin/media') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ $route == 'admin/media' ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
                 <i class="fa-solid fa-photo-film w-5"></i> <span class="sidebar-text">Media Manager</span>
@@ -555,6 +561,12 @@
             @if($hasPerm('logistics') || $hasPerm('*'))
             <a href="{{ url('/admin/logistics') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ Str::startsWith($route, 'admin/logistics') ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
                 <i class="fa-solid fa-truck-fast w-5"></i> Logistics & Shipping
+            </a>
+            @endif
+
+            @if($hasPerm('delivery_pincodes') || $hasPerm('logistics') || $hasPerm('settings') || $hasPerm('*'))
+            <a href="{{ url('/admin/delivery-pincodes') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ Str::startsWith($route, 'admin/delivery-pincodes') ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
+                <i class="fa-solid fa-map-location-dot w-5 text-emerald-400"></i> Delivery Pincodes
             </a>
             @endif
 

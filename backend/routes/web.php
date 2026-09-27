@@ -91,6 +91,13 @@ Route::prefix('admin')->group(function () {
         Route::post('/videos/update/{id}', [AdminController::class, 'videosUpdate']);
         Route::post('/videos/delete', [AdminController::class, 'videosDelete']);
         Route::post('/videos/toggle-status', [AdminController::class, 'videosToggleStatus']);
+
+        // Delivery Pincodes / Serviceability Management (AJAX)
+        Route::get('/delivery-pincodes', [AdminController::class, 'deliveryPincodesIndex']);
+        Route::post('/delivery-pincodes/store', [AdminController::class, 'deliveryPincodesStore']);
+        Route::post('/delivery-pincodes/update/{id}', [AdminController::class, 'deliveryPincodesUpdate']);
+        Route::post('/delivery-pincodes/delete', [AdminController::class, 'deliveryPincodesDelete']);
+        Route::post('/delivery-pincodes/toggle-status', [AdminController::class, 'deliveryPincodesToggleStatus']);
         // Logistics & Shipping Management
         Route::get('/logistics', [AdminController::class, 'logisticsIndex']);
         Route::get('/logistics/riders', [AdminController::class, 'ridersIndex']);

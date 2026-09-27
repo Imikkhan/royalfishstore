@@ -89,6 +89,31 @@ CREATE TABLE IF NOT EXISTS `slides` (
     `updated_at` TIMESTAMP NULL DEFAULT NULL,
     PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- 7. Create `delivery_pincodes` table (Admin-controlled serviceable delivery pincodes)
+CREATE TABLE IF NOT EXISTS `delivery_pincodes` (
+    `id` BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+    `pincode` VARCHAR(6) NOT NULL,
+    `area_name` VARCHAR(255) NULL,
+    `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+    `sort_order` INT(11) NOT NULL DEFAULT 0,
+    `created_at` TIMESTAMP NULL DEFAULT NULL,
+    `updated_at` TIMESTAMP NULL DEFAULT NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `delivery_pincodes_pincode_unique` (`pincode`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 7b. Seed the delivery hubs that were previously hardcoded on the website (only inserts, never overwrites)
+INSERT IGNORE INTO `delivery_pincodes` (`pincode`, `area_name`, `is_active`, `sort_order`, `created_at`, `updated_at`) VALUES
+('700156', 'Action Area I (New Town)', 1, 1, NOW(), NOW()),
+('700136', 'Action Area II / Chinar Park', 1, 2, NOW(), NOW()),
+('700160', 'Action Area III (New Town)', 1, 3, NOW(), NOW()),
+('700135', 'Rajarhat / DLF 1 & 2', 1, 4, NOW(), NOW()),
+('700091', 'Sector V / Salt Lake IT Hub', 1, 5, NOW(), NOW()),
+('700064', 'Salt Lake (Sector I, II, III)', 1, 6, NOW(), NOW()),
+('700010', 'Ultadanga / Kankurgachi', 1, 7, NOW(), NOW()),
+('700107', 'EM Bypass / Ruby', 1, 8, NOW(), NOW());
+
+
 
 -- 8. Fix original_price: set to 20% above price where it's NULL, 0, or incorrectly <= price
 UPDATE `products` SET `original_price` = CEIL(`price` * 1.20)

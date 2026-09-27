@@ -10,6 +10,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Setting;
 use App\Models\Slide;
+use App\Models\DeliveryPincode;
 use App\Models\OtpVerification;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
@@ -265,67 +266,132 @@ class ApiController extends Controller
 
     /**
      * Verify if a 6-digit Pincode is deliverable.
+     * Authoritative check against the Admin-controlled delivery pincodes list.
      */
     public function checkPincode(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'pincode' => 'required|string|min:6|max:6',
         ]);
+
+        // Always answer malformed input with JSON (never a redirect) so the
+        // customer-facing modal can render a proper validation message.
+        if ($validator->fails()) {
+            return response()->json([
+                'pincode' => preg_replace('/\D/', '', (string)$request->pincode),
+                'isDeliverable' => false,
+                'status' => 'invalid',
+                'areaName' => null,
+                'estimatedTime' => null,
+                'message' => 'Please enter a valid 6-digit delivery pincode.'
+            ], 422);
+        }
 
         $pincode = trim($request->pincode);
         $cleanPin = preg_replace('/\D/', '', $pincode);
 
-        // Check if any active product is deliverable to this pincode
-        $activeProducts = Product::where('is_active', true)->get();
-        $deliverable = false;
+        if (strlen($cleanPin) !== 6) {
+            return response()->json([
+                'pincode' => $cleanPin,
+                'isDeliverable' => false,
+                'status' => 'invalid',
+                'areaName' => null,
+                'estimatedTime' => null,
+                'message' => 'Please enter a valid 6-digit delivery pincode.'
+            ]);
+        }
 
-        foreach ($activeProducts as $product) {
-            if ($product->isDeliverableToPincode($cleanPin)) {
-                $deliverable = true;
-                break;
+        $deliverable = false;
+        $areaName = null;
+
+        if (DeliveryPincode::isConfigured()) {
+            // Admin-managed serviceable pincodes are the single source of truth
+            $deliverable = DeliveryPincode::isServiceable($cleanPin);
+            $hub = DeliveryPincode::findHub($cleanPin);
+            $areaName = $hub ? $hub->area_name : null;
+        } else {
+            // Nothing configured yet → fall back to product level serviceability
+            $activeProducts = Product::where('is_active', true)->get();
+            foreach ($activeProducts as $product) {
+                if ($product->isDeliverableToPincode($cleanPin)) {
+                    $deliverable = true;
+                    break;
+                }
             }
         }
 
         return response()->json([
             'pincode' => $cleanPin,
             'isDeliverable' => $deliverable,
+            'status' => $deliverable ? 'serviceable' : 'coming_soon',
+            'areaName' => $areaName,
             'estimatedTime' => $deliverable ? '30-45 Mins Express' : null,
-            'message' => $deliverable 
-                ? 'Express delivery available for ' . $cleanPin
-                : 'Delivery is currently not available for ' . $cleanPin . '. Please select a serviceable location.'
+            'message' => $deliverable
+                ? 'Express delivery available for ' . $cleanPin . ($areaName ? ' (' . $areaName . ')' : '')
+                : 'We are not delivering to ' . $cleanPin . ' yet. This area is coming soon — please select one of our serviceable delivery areas.'
         ]);
     }
 
     /**
-     * Get all unique serviceable pincodes across active products.
+     * Get all serviceable pincodes. Admin-controlled list is the primary source,
+     * with a product-derived fallback only while nothing has been configured yet.
      */
     public function getServiceablePincodes()
     {
-        $activeProducts = Product::where('is_active', true)->get();
-        $pincodes = [];
+        $isConfigured = DeliveryPincode::isConfigured();
+        $hubs = DeliveryPincode::hubs();
         $hasWildcard = false;
 
-        foreach ($activeProducts as $p) {
-            $pins = $p->serviced_pincodes;
-            if (is_array($pins)) {
-                foreach ($pins as $pin) {
-                    $pin = trim((string)$pin);
-                    if ($pin === '*') {
-                        $hasWildcard = true;
-                    } elseif (strlen($pin) === 6 && ctype_digit($pin)) {
-                        $pincodes[$pin] = true;
+        if (!$isConfigured) {
+            // Legacy fallback: derive unique pincodes from active products
+            $activeProducts = Product::where('is_active', true)->get();
+            $pincodes = [];
+
+            foreach ($activeProducts as $p) {
+                $pins = $p->serviced_pincodes;
+                if (is_array($pins)) {
+                    foreach ($pins as $pin) {
+                        $pin = trim((string)$pin);
+                        if ($pin === '*') {
+                            $hasWildcard = true;
+                        } elseif (strlen($pin) === 6 && ctype_digit($pin)) {
+                            $pincodes[$pin] = true;
+                        }
                     }
                 }
             }
+
+            $pincodes = array_keys($pincodes);
+            sort($pincodes);
+
+            $hubs = array_map(function ($pin) {
+                return [
+                    'pincode' => $pin,
+                    'area_name' => null,
+                    'areaName' => null,
+                    'is_active' => true,
+                ];
+            }, $pincodes);
         }
 
-        $uniquePincodes = array_keys($pincodes);
+        $uniquePincodes = [];
+        foreach ($hubs as $hub) {
+            $pin = DeliveryPincode::normalize($hub['pincode'] ?? '');
+            if (strlen($pin) === 6) {
+                $uniquePincodes[$pin] = true;
+            }
+        }
+        $uniquePincodes = array_keys($uniquePincodes);
         sort($uniquePincodes);
 
         return response()->json([
             'serviceable_pincodes' => $uniquePincodes,
+            'hubs' => array_values($hubs),
             'has_wildcard' => $hasWildcard,
-            'default_pincode' => !empty($uniquePincodes) ? $uniquePincodes[0] : '700156'
+            'is_configured' => $isConfigured,
+            'default_pincode' => !empty($hubs) && !empty($hubs[0]['pincode']) && strlen((string)$hubs[0]['pincode']) === 6
+                ? $hubs[0]['pincode']
+                : (!empty($uniquePincodes) ? $uniquePincodes[0] : '700156')
         ]);
     }
 
@@ -391,8 +457,8 @@ class ApiController extends Controller
                 }
 
                 $isDeliverableToPincode = true;
-                if ($userPincode && !empty($servicedPincodes) && !in_array('*', $servicedPincodes)) {
-                    $isDeliverableToPincode = in_array($userPincode, $servicedPincodes);
+                if ($userPincode) {
+                    $isDeliverableToPincode = $p->isDeliverableToPincode($userPincode);
                 }
 
                 $deliverySlotResolved = $resolveDeliverySlot($p->delivery_time);
@@ -975,6 +1041,16 @@ class ApiController extends Controller
             return response()->json([
                 'error' => 'invalid_delivery_pincode',
                 'message' => 'Please provide a valid 6-digit delivery pincode for your address.'
+            ], 422);
+        }
+
+        // 3b. Enforce Admin-controlled serviceability (delivery_pincodes table).
+        // Never trust the frontend — a pincode disabled by the admin must be rejected here.
+        if (DeliveryPincode::isConfigured() && !DeliveryPincode::isServiceable($cleanDeliveryPincode)) {
+            return response()->json([
+                'error' => 'pincode_not_serviceable',
+                'message' => "We are not delivering to pincode {$cleanDeliveryPincode} yet. Please choose one of our serviceable delivery pincodes.",
+                'pincode' => $cleanDeliveryPincode
             ], 422);
         }
 

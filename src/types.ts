@@ -40,6 +40,14 @@ export interface Product {
   is_low_stock?: boolean;
 }
 
+export interface DeliveryHub {
+  pincode: string;
+  areaName?: string | null;
+  area_name?: string | null;
+  isActive?: boolean;
+  is_active?: boolean;
+}
+
 export interface Slide {
   id: string;
   title: string;

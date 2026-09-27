@@ -1,47 +1,81 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { MapPin, CheckCircle, AlertCircle, X, Check, Sparkles } from 'lucide-react';
+import { DeliveryHub } from '../types';
+import { MapPin, AlertCircle, X, Check, Sparkles, Loader2, Clock, CheckCircle } from 'lucide-react';
 
 interface PincodeModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+type VerificationState = 'idle' | 'checking' | 'coming_soon' | 'invalid';
+
 export const PincodeModal: React.FC<PincodeModalProps> = ({ isOpen, onClose }) => {
-  const { activePincode, setPincode, serviceablePincodes, isPincodeServiceable } = useApp();
+  const {
+    activePincode,
+    setPincode,
+    serviceablePincodes,
+    serviceableHubs,
+    isLoadingPincodes,
+    pincodesError,
+    refreshServiceablePincodes,
+    verifyPincode
+  } = useApp();
   const [inputPin, setInputPin] = useState(activePincode || '');
-  const [errorMsg, setErrorMsg] = useState('');
-  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationState, setVerificationState] = useState<VerificationState>('idle');
+  const [message, setMessage] = useState('');
+
+  // Always pull a fresh Admin-controlled list whenever the modal is opened
+  useEffect(() => {
+    if (isOpen) {
+      setInputPin(activePincode || '');
+      refreshServiceablePincodes();
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const popularAreas = [
-    { name: 'Action Area I (New Town)', pin: '700156' },
-    { name: 'Action Area II / Chinar Park', pin: '700136' },
-    { name: 'Action Area III (New Town)', pin: '700160' },
-    { name: 'Rajarhat / DLF 1 & 2', pin: '700135' },
-    { name: 'Sector V / Salt Lake IT Hub', pin: '700091' },
-    { name: 'Salt Lake (Sector I, II, III)', pin: '700064' },
-    { name: 'Ultadanga / Kankurgachi', pin: '700010' },
-    { name: 'EM Bypass / Ruby', pin: '700107' },
-  ];
+  // Admin-managed delivery hubs (pincode-only fallback when no area name is configured)
+  const hubs: DeliveryHub[] = serviceableHubs.length > 0
+    ? serviceableHubs
+    : serviceablePincodes.map(pin => ({ pincode: pin, areaName: null, area_name: null, isActive: true }));
 
-  const handleSubmit = (pinToSet?: string) => {
+  const resetVerification = () => {
+    setVerificationState('idle');
+    setMessage('');
+  };
+
+  const handleSubmit = async (pinToSet?: string) => {
     const targetPin = pinToSet || inputPin;
     const cleanPin = targetPin.trim().replace(/\D/g, '');
 
     if (!cleanPin || cleanPin.length !== 6) {
-      setErrorMsg('Please enter a valid 6-digit Indian pincode (e.g. 700135)');
+      setVerificationState('invalid');
+      setMessage('Please enter a valid 6-digit Indian pincode (e.g. 700135).');
       return;
     }
 
-    // Check serviceability
-    if (!isPincodeServiceable(cleanPin)) {
-      setErrorMsg(`Sorry, delivery is not available for ${cleanPin}. Please select from our serviceable areas.`);
+    setVerificationState('checking');
+    setMessage('');
+
+    // Authoritative backend validation against the Admin-controlled pincode list
+    const result = await verifyPincode(cleanPin);
+
+    if (result.status === 'invalid') {
+      setVerificationState('invalid');
+      setMessage(result.message);
       return;
     }
 
-    setErrorMsg('');
+    if (!result.isServiceable) {
+      setVerificationState('coming_soon');
+      setMessage(result.message);
+      // Refresh in case the admin changed the list while the modal was open
+      refreshServiceablePincodes();
+      return;
+    }
+
+    resetVerification();
     setPincode(cleanPin);
     onClose();
   };
@@ -93,7 +127,7 @@ export const PincodeModal: React.FC<PincodeModalProps> = ({ isOpen, onClose }) =
                 value={inputPin}
                 onChange={(e) => {
                   setInputPin(e.target.value);
-                  if (errorMsg) setErrorMsg('');
+                  if (verificationState !== 'idle') resetVerification();
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleSubmit();
@@ -103,21 +137,63 @@ export const PincodeModal: React.FC<PincodeModalProps> = ({ isOpen, onClose }) =
               />
               <button
                 onClick={() => handleSubmit()}
-                className="absolute right-2 top-1/2 -translate-y-1/2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-md active:scale-95 cursor-pointer"
+                disabled={verificationState === 'checking'}
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-red-600 hover:bg-red-700 disabled:opacity-70 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-1.5"
               >
-                Apply
+                {verificationState === 'checking' ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Checking</span>
+                  </>
+                ) : (
+                  <span>Apply</span>
+                )}
               </button>
             </div>
 
-            {errorMsg && (
+            {verificationState === 'invalid' && message && (
               <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 rounded-xl flex items-start gap-2 text-red-600 dark:text-red-400 text-xs font-semibold">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>{errorMsg}</span>
+                <span>{message}</span>
+              </div>
+            )}
+
+            {/* Non-serviceable pincode → Coming Soon state */}
+            {verificationState === 'coming_soon' && (
+              <div className="p-3.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 rounded-2xl space-y-2">
+                <div className="flex items-start gap-2">
+                  <Clock className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                  <div className="text-xs">
+                    <p className="font-black text-amber-700 dark:text-amber-400">
+                      Coming soon to {inputPin.trim().replace(/\D/g, '') || 'this area'}!
+                    </p>
+                    <p className="text-[11px] text-amber-700/90 dark:text-amber-300/90 font-medium mt-0.5 leading-relaxed">
+                      {message || 'Our cold-chain delivery is not available here yet. Please choose one of our serviceable delivery areas below.'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInputPin('');
+                    resetVerification();
+                  }}
+                  className="w-full text-[11px] font-extrabold text-amber-700 dark:text-amber-400 bg-amber-100/70 dark:bg-amber-950/50 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-xl py-2 transition-colors cursor-pointer"
+                >
+                  Try Another Pincode
+                </button>
+              </div>
+            )}
+
+            {pincodesError && verificationState === 'idle' && (
+              <div className="p-3 bg-gray-50 dark:bg-slate-800/60 border border-gray-200 dark:border-slate-700 rounded-xl flex items-start gap-2 text-gray-500 dark:text-gray-400 text-[11px] font-semibold">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{pincodesError}</span>
               </div>
             )}
           </div>
 
-          {/* Quick Select Serviceable Areas */}
+          {/* Quick Select Serviceable Areas (admin controlled) */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
@@ -125,42 +201,63 @@ export const PincodeModal: React.FC<PincodeModalProps> = ({ isOpen, onClose }) =
                 <span>Serviceable Delivery Hubs</span>
               </span>
               <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full">
-                Active Zone
+                {isLoadingPincodes
+                  ? 'Loading…'
+                  : `${hubs.length} Active Zone${hubs.length === 1 ? '' : 's'}`}
               </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
-              {popularAreas.map(area => {
-                const isSelected = activePincode === area.pin;
-                return (
-                  <button
-                    key={area.pin}
-                    type="button"
-                    onClick={() => {
-                      setInputPin(area.pin);
-                      handleSubmit(area.pin);
-                    }}
-                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                      isSelected
-                        ? 'border-red-500 bg-red-50/60 dark:bg-red-950/30'
-                        : 'border-gray-200/80 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/40 hover:border-gray-300 dark:hover:border-slate-700'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-mono font-bold text-xs text-gray-900 dark:text-white">
-                        {area.pin}
+            {isLoadingPincodes ? (
+              <div className="grid grid-cols-2 gap-2">
+                {[0, 1, 2, 3].map(i => (
+                  <div key={i} className="h-14 rounded-xl bg-gray-100 dark:bg-slate-800/60 animate-pulse" />
+                ))}
+              </div>
+            ) : hubs.length === 0 ? (
+              <div className="p-4 bg-gray-50 dark:bg-slate-800/40 border border-dashed border-gray-200 dark:border-slate-700 rounded-2xl text-center">
+                <Clock className="w-5 h-5 mx-auto text-amber-500" />
+                <p className="text-xs font-bold text-gray-700 dark:text-gray-200 mt-1.5">
+                  Delivery zones are being updated
+                </p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">
+                  Our serviceable delivery areas are being reconfigured right now. Please check back shortly.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                {hubs.map(hub => {
+                  const isSelected = activePincode === hub.pincode;
+                  const areaLabel = hub.areaName || hub.area_name || 'Serviceable Delivery Area';
+                  return (
+                    <button
+                      key={hub.pincode}
+                      type="button"
+                      onClick={() => {
+                        setInputPin(hub.pincode);
+                        handleSubmit(hub.pincode);
+                      }}
+                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                        isSelected
+                          ? 'border-red-500 bg-red-50/60 dark:bg-red-950/30'
+                          : 'border-gray-200/80 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/40 hover:border-gray-300 dark:hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-mono font-bold text-xs text-gray-900 dark:text-white">
+                          {hub.pincode}
+                        </span>
+                        {isSelected && (
+                          <Check className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                        )}
+                      </div>
+                      <span className="text-[10.5px] text-gray-500 dark:text-gray-400 line-clamp-1">
+                        {areaLabel}
                       </span>
-                      {isSelected && (
-                        <Check className="w-3.5 h-3.5 text-red-600 shrink-0" />
-                      )}
-                    </div>
-                    <span className="text-[10.5px] text-gray-500 dark:text-gray-400 line-clamp-1">
-                      {area.name}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Guarantee Footer */}

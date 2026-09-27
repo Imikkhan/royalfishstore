@@ -117,18 +117,24 @@ export const Cart: React.FC = () => {
   const selectedAddress = addresses.find(a => a.id === selectedAddressId) || addresses[0];
   const selectedZip = (selectedAddress?.zipCode || (selectedAddress as any)?.pincode || activePincode || '').toString().trim().replace(/\D/g, '');
 
+  // Check if selected address pincode is serviceable by Admin
+  const isAddressServiceable = selectedZip ? isPincodeServiceable(selectedZip) : false;
+
   // Calculate items that cannot be delivered to selected delivery address pincode
   const undeliverableCartItems = useMemo(() => {
     if (!selectedZip || selectedZip.length !== 6) return [];
+    if (!isAddressServiceable) {
+      return cart;
+    }
     return cart.filter(item => {
       const pins = item.product.servicedPincodes;
       if (!pins || pins.length === 0) return true;
       if (pins.includes('*')) return false;
       return !pins.includes(selectedZip);
     });
-  }, [cart, selectedZip]);
+  }, [cart, selectedZip, isAddressServiceable]);
 
-  const hasUndeliverableItems = undeliverableCartItems.length > 0;
+  const hasUndeliverableItems = !isAddressServiceable || undeliverableCartItems.length > 0;
 
   // Reset coupon since coupon is hidden
   useEffect(() => {
@@ -828,7 +834,9 @@ export const Cart: React.FC = () => {
                   <span>Cannot Deliver to Pincode {selectedZip}</span>
                 </div>
                 <p className="text-[11px] text-red-600 dark:text-red-400 leading-tight">
-                  Item(s) <strong>{undeliverableCartItems.map(i => i.product.name).join(', ')}</strong> cannot be delivered to {selectedZip}. Admin has restricted delivery for these items to specific serviceable areas. Please change your address or remove these items from your basket.
+                  {!isAddressServiceable
+                    ? `Pincode ${selectedZip} is currently not in our active delivery zone. Please choose a delivery address in our serviceable areas.`
+                    : `Item(s) ${undeliverableCartItems.map(i => i.product.name).join(', ')} cannot be delivered to ${selectedZip}. Admin has restricted delivery for these items to specific serviceable areas. Please change your address or remove these items from your basket.`}
                 </p>
               </div>
             )}

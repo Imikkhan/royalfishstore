@@ -123,6 +123,11 @@ class Product extends Model
             return false;
         }
 
+        // Global master delivery pincode check (if configured by admin)
+        if (DeliveryPincode::isConfigured() && !DeliveryPincode::isServiceable($cleanPin)) {
+            return false;
+        }
+
         $pins = $this->serviced_pincodes;
         if (empty($pins)) {
             return false;
