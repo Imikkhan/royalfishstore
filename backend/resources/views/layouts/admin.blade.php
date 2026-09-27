@@ -338,6 +338,12 @@
             </a>
             @endif
 
+            @if($hasPerm('reviews') || $hasPerm('settings') || $hasPerm('*'))
+            <a href="{{ url('/admin/reviews') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ Str::startsWith($route, 'admin/reviews') ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
+                <i class="fa-solid fa-star w-5 text-amber-400"></i> <span class="sidebar-text">Customer Reviews</span>
+            </a>
+            @endif
+
             @if($hasPerm('facebook_ad') || $hasPerm('facebook-ad') || $hasPerm('settings') || $hasPerm('*'))
             <a href="{{ url('/admin/facebook-ad') }}" class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors {{ Str::startsWith($route, 'admin/facebook-ad') ? 'bg-red-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white' }}">
                 <i class="fa-brands fa-facebook w-5 text-blue-400"></i> <span class="sidebar-text">Facebook Ad Page</span>

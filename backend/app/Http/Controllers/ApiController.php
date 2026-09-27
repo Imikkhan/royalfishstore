@@ -12,6 +12,7 @@ use App\Models\Setting;
 use App\Models\Slide;
 use App\Models\DeliveryPincode;
 use App\Models\OtpVerification;
+use App\Models\Review;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -1317,5 +1318,208 @@ class ApiController extends Controller
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Get dynamic customer reviews list and summary metrics.
+     */
+    public function getReviews(Request $request)
+    {
+        try {
+            $query = Review::where('is_active', true);
+
+            // Optional filter: 'media' (photos or videos only), or star rating (1-5)
+            $filter = $request->query('filter');
+            if ($filter === 'media' || $filter === 'with_media') {
+                $query->where(function ($q) {
+                    $q->whereNotNull('video_url')
+                      ->orWhere(function ($sub) {
+                          $sub->whereNotNull('images')
+                              ->where('images', '!=', '[]')
+                              ->where('images', '!=', '');
+                      });
+                });
+            } elseif (in_array($filter, ['1', '2', '3', '4', '5'])) {
+                $query->where('rating', (int)$filter);
+            }
+
+            if ($request->filled('product_id')) {
+                $query->where('product_id', $request->product_id);
+            }
+
+            $allActiveReviews = Review::where('is_active', true)->get();
+            $totalCount = $allActiveReviews->count();
+            $avgRating = $totalCount > 0 ? round($allActiveReviews->avg('rating'), 1) : 4.9;
+
+            $breakdown = [
+                '5' => $allActiveReviews->where('rating', 5)->count(),
+                '4' => $allActiveReviews->where('rating', 4)->count(),
+                '3' => $allActiveReviews->where('rating', 3)->count(),
+                '2' => $allActiveReviews->where('rating', 2)->count(),
+                '1' => $allActiveReviews->where('rating', 1)->count(),
+            ];
+
+            $withMediaCount = $allActiveReviews->filter(function ($r) {
+                return !empty($r->video_url) || (!empty($r->images) && is_array($r->images) && count($r->images) > 0);
+            })->count();
+
+            $reviews = $query->orderBy('sort_order', 'asc')
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($r) {
+                    // Safe images array parsing
+                    $imgs = $r->images;
+                    if (is_string($imgs)) {
+                        $imgs = json_decode($imgs, true) ?: [];
+                    }
+                    if (!is_array($imgs)) {
+                        $imgs = [];
+                    }
+
+                    // Format time ago
+                    $timeAgo = $r->created_at ? $r->created_at->diffForHumans() : 'Recently';
+
+                    return [
+                        'id' => (string)$r->id,
+                        'name' => $r->name,
+                        'avatar' => $r->avatar ?: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+                        'rating' => (int)$r->rating,
+                        'quote' => $r->quote,
+                        'comment' => $r->quote,
+                        'product_tag' => $r->product_tag ?: 'Seafood & Meat Lover',
+                        'productTag' => $r->product_tag ?: 'Seafood & Meat Lover',
+                        'images' => $imgs,
+                        'video_url' => $r->video_url,
+                        'videoUrl' => $r->video_url,
+                        'is_verified' => (bool)$r->is_verified,
+                        'isVerified' => (bool)$r->is_verified,
+                        'created_at' => $r->created_at ? $r->created_at->toIso8601String() : null,
+                        'timeAgo' => $timeAgo,
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'summary' => [
+                    'average_rating' => $avgRating,
+                    'total_reviews' => $totalCount,
+                    'rating_breakdown' => $breakdown,
+                    'with_media_count' => $withMediaCount,
+                ],
+                'reviews' => $reviews,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Submit a new customer review with optional photos and video attachment.
+     */
+    public function submitReview(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:100',
+            'rating' => 'required|integer|min:1|max:5',
+            'quote' => 'nullable|string',
+            'comment' => 'nullable|string',
+            'product_tag' => 'nullable|string|max:150',
+            'video_url' => 'nullable|string',
+            'images.*' => 'nullable|file|mimes:jpeg,png,jpg,webp,gif|max:10240',
+            'video_file' => 'nullable|file|mimes:mp4,mov,avi,webm|max:51200',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $quote = trim($request->input('quote') ?: $request->input('comment', ''));
+        if (empty($quote)) {
+            return response()->json([
+                'success' => false,
+                'errors' => ['comment' => ['Please enter your review feedback.']]
+            ], 422);
+        }
+
+        $uploadDir = public_path('uploads/reviews');
+        if (!file_exists($uploadDir)) {
+            mkdir($uploadDir, 0777, true);
+        }
+
+        // Process uploaded images or image URLs
+        $images = [];
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $file) {
+                if ($file && $file->isValid()) {
+                    $fileName = 'rev_' . time() . '_' . Str::random(8) . '.' . $file->getClientOriginalExtension();
+                    $file->move($uploadDir, $fileName);
+                    $images[] = asset('uploads/reviews/' . $fileName);
+                }
+            }
+        } elseif ($request->hasFile('image')) {
+            $file = $request->file('image');
+            if ($file && $file->isValid()) {
+                $fileName = 'rev_' . time() . '_' . Str::random(8) . '.' . $file->getClientOriginalExtension();
+                $file->move($uploadDir, $fileName);
+                $images[] = asset('uploads/reviews/' . $fileName);
+            }
+        }
+
+        // Also check if JSON / array of image URLs were submitted
+        if ($request->filled('image_urls')) {
+            $parsedUrls = is_array($request->image_urls) ? $request->image_urls : json_decode($request->image_urls, true);
+            if (is_array($parsedUrls)) {
+                $images = array_merge($images, $parsedUrls);
+            }
+        }
+
+        // Process video file or video URL
+        $videoUrl = $request->input('video_url');
+        if ($request->hasFile('video_file')) {
+            $vFile = $request->file('video_file');
+            if ($vFile && $vFile->isValid()) {
+                $vName = 'vid_' . time() . '_' . Str::random(8) . '.' . $vFile->getClientOriginalExtension();
+                $vFile->move($uploadDir, $vName);
+                $videoUrl = asset('uploads/reviews/' . $vName);
+            }
+        }
+
+        $review = Review::create([
+            'name' => trim($request->name),
+            'avatar' => $request->avatar ?: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+            'rating' => (int)$request->rating,
+            'quote' => $quote,
+            'product_tag' => trim($request->product_tag ?: 'Royal Fish Fresh Catch'),
+            'images' => $images,
+            'video_url' => $videoUrl,
+            'is_verified' => true,
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Thank you! Your review with media has been published successfully.',
+            'review' => [
+                'id' => (string)$review->id,
+                'name' => $review->name,
+                'avatar' => $review->avatar,
+                'rating' => (int)$review->rating,
+                'quote' => $review->quote,
+                'comment' => $review->quote,
+                'product_tag' => $review->product_tag,
+                'productTag' => $review->product_tag,
+                'images' => $images,
+                'video_url' => $videoUrl,
+                'videoUrl' => $videoUrl,
+                'is_verified' => true,
+                'isVerified' => true,
+                'timeAgo' => 'Just now',
+                'created_at' => $review->created_at->toIso8601String(),
+            ]
+        ], 201);
     }
 }

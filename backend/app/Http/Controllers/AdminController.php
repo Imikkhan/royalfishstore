@@ -16,6 +16,7 @@ use App\Models\Slide;
 use App\Models\Rider;
 use App\Models\Video;
 use App\Models\DeliveryPincode;
+use App\Models\Review;
 use App\Models\OtpVerification;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
@@ -2092,6 +2093,222 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'message' => $row->is_active ? 'Pincode enabled for delivery.' : 'Pincode disabled for delivery.',
+            'is_active' => $row->is_active
+        ]);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | CUSTOMER REVIEWS MANAGEMENT
+    |--------------------------------------------------------------------------
+    */
+    public function reviewsIndex(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user->hasPermission('reviews') && !$user->hasPermission('settings') && !$user->hasPermission('*')) {
+            abort(403);
+        }
+
+        if ($request->ajax()) {
+            $reviews = Review::orderBy('sort_order', 'asc')
+                ->orderBy('created_at', 'desc')
+                ->get();
+            return response()->json(['data' => $reviews]);
+        }
+
+        $reviews = Review::orderBy('sort_order', 'asc')
+            ->orderBy('created_at', 'desc')
+            ->get();
+        return view('admin.reviews', compact('reviews'));
+    }
+
+    public function reviewsStore(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user->hasPermission('reviews') && !$user->hasPermission('settings') && !$user->hasPermission('*')) {
+            abort(403);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:100',
+            'rating' => 'required|integer|min:1|max:5',
+            'quote' => 'required|string',
+            'product_tag' => 'nullable|string|max:150',
+            'video_url' => 'nullable|string',
+            'image_files.*' => 'nullable|file|mimes:jpeg,png,jpg,webp,gif|max:10240',
+        ]);
+
+        $uploadDir = public_path('uploads/reviews');
+        if (!file_exists($uploadDir)) {
+            mkdir($uploadDir, 0777, true);
+        }
+
+        $images = [];
+        if ($request->filled('image_urls')) {
+            $raw = is_array($request->image_urls) ? $request->image_urls : json_decode($request->image_urls, true);
+            if (is_array($raw)) {
+                $images = array_merge($images, array_filter($raw));
+            }
+        }
+
+        if ($request->hasFile('image_files')) {
+            foreach ($request->file('image_files') as $file) {
+                if ($file && $file->isValid()) {
+                    $fileName = 'rev_' . time() . '_' . Str::random(8) . '.' . $file->getClientOriginalExtension();
+                    $file->move($uploadDir, $fileName);
+                    $images[] = asset('uploads/reviews/' . $fileName);
+                }
+            }
+        }
+
+        $avatar = $request->avatar ?: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80';
+        if ($request->hasFile('avatar_file')) {
+            $avFile = $request->file('avatar_file');
+            if ($avFile && $avFile->isValid()) {
+                $avName = 'av_' . time() . '_' . Str::random(8) . '.' . $avFile->getClientOriginalExtension();
+                $avFile->move($uploadDir, $avName);
+                $avatar = asset('uploads/reviews/' . $avName);
+            }
+        }
+
+        $videoUrl = $request->video_url;
+        if ($request->hasFile('video_file')) {
+            $vFile = $request->file('video_file');
+            if ($vFile && $vFile->isValid()) {
+                $vName = 'vid_' . time() . '_' . Str::random(8) . '.' . $vFile->getClientOriginalExtension();
+                $vFile->move($uploadDir, $vName);
+                $videoUrl = asset('uploads/reviews/' . $vName);
+            }
+        }
+
+        $review = Review::create([
+            'name' => trim($request->name),
+            'avatar' => $avatar,
+            'rating' => (int)$request->rating,
+            'quote' => trim($request->quote),
+            'product_tag' => trim($request->product_tag ?: 'Royal Fish Fresh Catch'),
+            'images' => $images,
+            'video_url' => $videoUrl,
+            'is_verified' => $request->has('is_verified') ? (bool)$request->is_verified : true,
+            'is_active' => $request->has('is_active') ? (bool)$request->is_active : true,
+            'sort_order' => $request->sort_order !== null ? (int)$request->sort_order : 0,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Customer review added successfully!',
+            'review' => $review
+        ]);
+    }
+
+    public function reviewsUpdate(Request $request, $id)
+    {
+        $user = Auth::user();
+        if (!$user->hasPermission('reviews') && !$user->hasPermission('settings') && !$user->hasPermission('*')) {
+            abort(403);
+        }
+
+        $review = Review::findOrFail($id);
+
+        $request->validate([
+            'name' => 'required|string|max:100',
+            'rating' => 'required|integer|min:1|max:5',
+            'quote' => 'required|string',
+            'product_tag' => 'nullable|string|max:150',
+            'video_url' => 'nullable|string',
+        ]);
+
+        $uploadDir = public_path('uploads/reviews');
+        if (!file_exists($uploadDir)) {
+            mkdir($uploadDir, 0777, true);
+        }
+
+        $images = $review->images ?: [];
+        if ($request->filled('image_urls')) {
+            $raw = is_array($request->image_urls) ? $request->image_urls : json_decode($request->image_urls, true);
+            if (is_array($raw)) {
+                $images = array_filter($raw);
+            }
+        }
+
+        if ($request->hasFile('image_files')) {
+            foreach ($request->file('image_files') as $file) {
+                if ($file && $file->isValid()) {
+                    $fileName = 'rev_' . time() . '_' . Str::random(8) . '.' . $file->getClientOriginalExtension();
+                    $file->move($uploadDir, $fileName);
+                    $images[] = asset('uploads/reviews/' . $fileName);
+                }
+            }
+        }
+
+        $avatar = $request->avatar ?: $review->avatar;
+        if ($request->hasFile('avatar_file')) {
+            $avFile = $request->file('avatar_file');
+            if ($avFile && $avFile->isValid()) {
+                $avName = 'av_' . time() . '_' . Str::random(8) . '.' . $avFile->getClientOriginalExtension();
+                $avFile->move($uploadDir, $avName);
+                $avatar = asset('uploads/reviews/' . $avName);
+            }
+        }
+
+        $videoUrl = $request->video_url !== null ? $request->video_url : $review->video_url;
+        if ($request->hasFile('video_file')) {
+            $vFile = $request->file('video_file');
+            if ($vFile && $vFile->isValid()) {
+                $vName = 'vid_' . time() . '_' . Str::random(8) . '.' . $vFile->getClientOriginalExtension();
+                $vFile->move($uploadDir, $vName);
+                $videoUrl = asset('uploads/reviews/' . $vName);
+            }
+        }
+
+        $review->update([
+            'name' => trim($request->name),
+            'avatar' => $avatar,
+            'rating' => (int)$request->rating,
+            'quote' => trim($request->quote),
+            'product_tag' => trim($request->product_tag ?: 'Royal Fish Fresh Catch'),
+            'images' => $images,
+            'video_url' => $videoUrl,
+            'is_verified' => $request->has('is_verified') ? (bool)$request->is_verified : $review->is_verified,
+            'is_active' => $request->has('is_active') ? (bool)$request->is_active : $review->is_active,
+            'sort_order' => $request->sort_order !== null ? (int)$request->sort_order : $review->sort_order,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Customer review updated successfully!',
+            'review' => $review
+        ]);
+    }
+
+    public function reviewsDelete(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user->hasPermission('reviews') && !$user->hasPermission('settings') && !$user->hasPermission('*')) {
+            abort(403);
+        }
+
+        $request->validate(['id' => 'required|exists:reviews,id']);
+        Review::destroy($request->id);
+
+        return response()->json(['success' => true, 'message' => 'Review deleted successfully!']);
+    }
+
+    public function reviewsToggleStatus(Request $request)
+    {
+        $user = Auth::user();
+        if (!$user->hasPermission('reviews') && !$user->hasPermission('settings') && !$user->hasPermission('*')) {
+            abort(403);
+        }
+
+        $request->validate(['id' => 'required|exists:reviews,id']);
+        $row = Review::findOrFail($request->id);
+        $row->is_active = !$row->is_active;
+        $row->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => $row->is_active ? 'Review enabled/approved.' : 'Review hidden/disabled.',
             'is_active' => $row->is_active
         ]);
     }

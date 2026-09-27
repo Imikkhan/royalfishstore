@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Product, CartItem, Address, Order, PageId, User, Slide, Video, DeliveryHub } from '../types';
+import { Product, CartItem, Address, Order, PageId, User, Slide, Video, DeliveryHub, Review, ReviewSummary } from '../types';
 import { PRODUCTS, CATEGORIES, PROMO_SLIDES } from '../data/products';
 import { API_BASE_URL } from '../config';
 
@@ -121,6 +121,9 @@ export const parseLocationToRoute = (): ParsedRoute => {
   if (path === '/categories' || pageParam === 'categories') {
     return { page: 'categories', productId: null, category: null, query: null };
   }
+  if (path === '/reviews' || pageParam === 'reviews') {
+    return { page: 'reviews', productId: null, category: null, query: null };
+  }
   if (path === '/search' || pageParam === 'search') {
     return {
       page: 'search',
@@ -152,6 +155,8 @@ export const buildUrlForRoute = (
     }
     case 'categories':
       return '/categories';
+    case 'reviews':
+      return '/reviews';
     case 'cart':
       return '/cart';
     case 'login':
@@ -243,6 +248,10 @@ interface AppContextType {
   categories: any[];
   slides: Slide[];
   videos: Video[];
+  reviews: Review[];
+  reviewsSummary: ReviewSummary | null;
+  fetchReviews: (filter?: string) => Promise<void>;
+  submitReview: (formData: FormData) => Promise<{ success: boolean; message?: string }>;
 
   // Global Store Settings
   minOrderAmount: number;
@@ -271,6 +280,7 @@ interface AppContextType {
   isLoadingCategories: boolean;
   isLoadingSlides: boolean;
   isLoadingVideos: boolean;
+  isLoadingReviews: boolean;
 
   // Cart State
   cart: CartItem[];
@@ -369,6 +379,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [categories, setCategories] = useState<any[]>([]);
   const [slides, setSlides] = useState<Slide[]>([]);
   const [videos, setVideos] = useState<Video[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewsSummary, setReviewsSummary] = useState<ReviewSummary | null>(null);
+  const [isLoadingReviews, setIsLoadingReviews] = useState<boolean>(true);
 
   // Skeleton Loading States — starts as true while fetching live backend API data
   const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(true);
@@ -677,12 +690,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     fetchVideos();
 
-    // Re-fetch slides, categories, settings and videos on window focus and every 5s so Admin updates sync instantly
+    const fetchReviewsData = (filter?: string) => {
+      const url = filter ? `${API_BASE_URL}/reviews?filter=${encodeURIComponent(filter)}` : `${API_BASE_URL}/reviews`;
+      fetch(url)
+        .then(res => {
+          if (!res.ok) throw new Error();
+          return res.json();
+        })
+        .then(data => {
+          if (data && data.reviews && Array.isArray(data.reviews)) {
+            setReviews(data.reviews);
+            if (data.summary) {
+              setReviewsSummary(data.summary);
+            }
+          }
+          setIsLoadingReviews(false);
+        })
+        .catch(() => {
+          setIsLoadingReviews(false);
+        });
+    };
+
+    fetchReviewsData();
+
+    // Re-fetch slides, categories, settings, videos, and reviews on window focus and every 5s so Admin updates sync instantly
     const onFocus = () => {
       fetchSettings();
       fetchCategories();
       fetchSlides();
       fetchVideos();
+      fetchReviewsData();
     };
     window.addEventListener('focus', onFocus);
     const syncInterval = setInterval(() => {
@@ -690,6 +727,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       fetchCategories();
       fetchSlides();
       fetchVideos();
+      fetchReviewsData();
     }, 5000);
 
     return () => {
@@ -697,6 +735,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       clearInterval(syncInterval);
     };
   }, []);
+
+  const fetchReviews = async (filter?: string) => {
+    setIsLoadingReviews(true);
+    try {
+      const url = filter ? `${API_BASE_URL}/reviews?filter=${encodeURIComponent(filter)}` : `${API_BASE_URL}/reviews`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      if (data && data.reviews && Array.isArray(data.reviews)) {
+        setReviews(data.reviews);
+        if (data.summary) {
+          setReviewsSummary(data.summary);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to load reviews:', e);
+    } finally {
+      setIsLoadingReviews(false);
+    }
+  };
+
+  const submitReview = async (formData: FormData): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/reviews`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast(data.message || 'Review submitted successfully!', 'success');
+        await fetchReviews();
+        return { success: true, message: data.message };
+      } else {
+        const errorMsg = data.errors ? Object.values(data.errors).flat().join(', ') : (data.message || 'Failed to submit review.');
+        showToast(errorMsg, 'error');
+        return { success: false, message: errorMsg };
+      }
+    } catch (err: any) {
+      showToast('Network error while submitting review.', 'error');
+      return { success: false, message: 'Network error while submitting review.' };
+    }
+  };
 
   const fetchProductsList = () => {
     const params = new URLSearchParams();
@@ -1309,6 +1389,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isLoadingCategories,
         isLoadingSlides,
         isLoadingVideos,
+        reviews,
+        reviewsSummary,
+        isLoadingReviews,
+        fetchReviews,
+        submitReview,
         cart,
         addToCart,
         removeFromCart,

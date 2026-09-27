@@ -4,7 +4,7 @@ import { HeroSlider } from '../components/HeroSlider';
 import { TopCategoryTabs, CategoryList } from '../components/CategoryList';
 import { ProductCard } from '../components/ProductCard';
 import { SkeletonProductGrid } from '../components/SkeletonLoader';
-import { Sparkles, ArrowRight, Star, Play, Gift, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Sparkles, ArrowRight, Star, Play, Gift } from 'lucide-react';
 
 const VIDEOS = [
   {
@@ -60,10 +60,11 @@ const extractYoutubeId = (urlOrId: string | undefined | null): string => {
 };
 
 export const Home: React.FC = () => {
-  const { searchQuery, navigateTo, products, isLoadingProducts, videos } = useApp();
+  const { searchQuery, navigateTo, products, isLoadingProducts, videos, reviews } = useApp();
   const [activeVideoModal, setActiveVideoModal] = React.useState<any | null>(null);
 
   const displayVideos = videos && videos.length > 0 ? videos : VIDEOS;
+  const displayReviews = reviews && reviews.length > 0 ? reviews : CUSTOMER_REVIEWS;
   const videoScrollRef = React.useRef<HTMLDivElement>(null);
   const [isVideoPaused, setIsVideoPaused] = React.useState(false);
 
@@ -100,16 +101,6 @@ export const Home: React.FC = () => {
     animId = requestAnimationFrame(scrollStep);
     return () => cancelAnimationFrame(animId);
   }, [isVideoPaused, repeatedVideos.length]);
-
-  const scrollVideos = (direction: 'left' | 'right') => {
-    if (videoScrollRef.current) {
-      const scrollAmount = 260;
-      videoScrollRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth'
-      });
-    }
-  };
 
   // Filter products based on search query
   const filteredProducts = products.filter(product => {
@@ -306,25 +297,10 @@ export const Home: React.FC = () => {
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-[#fc490f] hidden sm:inline-block">
-                    {displayVideos.length} Videos
+                  <span className="text-xs font-bold text-[#fc490f] inline-flex items-center gap-1.5 bg-orange-50 dark:bg-orange-950/40 px-3 py-1 rounded-full border border-orange-200/50 dark:border-orange-800/40">
+                    <Play className="w-3 h-3 fill-current" />
+                    <span>Watch Shorts</span>
                   </span>
-                  <div className="flex items-center gap-1.5">
-                    <button 
-                      onClick={() => scrollVideos('left')}
-                      className="w-8 h-8 rounded-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-xs flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-                      aria-label="Previous videos"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <button 
-                      onClick={() => scrollVideos('right')}
-                      className="w-8 h-8 rounded-full bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-xs flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-                      aria-label="Next videos"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
                 </div>
               </div>
 
@@ -352,27 +328,22 @@ export const Home: React.FC = () => {
                       {/* Full-bleed Thumbnail Image */}
                       <img 
                         src={thumb} 
-                        alt={vid.title} 
+                        alt="Royal Fish Video" 
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = `https://img.youtube.com/vi/${yId}/mqdefault.jpg`;
                         }}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
                       />
 
-                      {/* Top Dark Vignette Gradient */}
-                      <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/80 via-black/30 to-transparent pointer-events-none p-3.5 flex flex-col justify-between">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="inline-flex items-center gap-1 bg-red-600/90 text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full shadow-xs">
-                            <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
-                            Shorts
-                          </span>
-                          <span className="bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-full border border-white/20">
-                            {vid.duration || '1:00'}
-                          </span>
-                        </div>
-                        <h4 className="text-white text-xs font-bold line-clamp-2 leading-tight drop-shadow-md">
-                          {vid.title}
-                        </h4>
+                      {/* Top Dark Vignette Gradient (No title text clutter) */}
+                      <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/80 via-black/30 to-transparent pointer-events-none p-3.5 flex items-center justify-between">
+                        <span className="inline-flex items-center gap-1 bg-red-600/90 text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full shadow-xs">
+                          <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
+                          Shorts
+                        </span>
+                        <span className="bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-full border border-white/20">
+                          {vid.duration || '0:45'}
+                        </span>
                       </div>
 
                       {/* Center Play Button Pulse on Hover */}
@@ -382,7 +353,7 @@ export const Home: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Bottom Dark Vignette Gradient + "Tap to view" Glass Pill (Moral Jewels signature look) */}
+                      {/* Bottom Dark Vignette Gradient + "Tap to view" Glass Pill */}
                       <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/90 via-black/40 to-transparent pointer-events-none flex items-end justify-center pb-4 px-3">
                         <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-white text-[11px] font-semibold border border-white/25 shadow-lg group-hover:bg-[#fc490f] group-hover:border-[#fc490f] group-hover:scale-105 transition-all duration-300 pointer-events-auto">
                           <Play className="w-3 h-3 fill-current text-white ml-0.5" />
@@ -447,36 +418,81 @@ export const Home: React.FC = () => {
                   Customer Reviews
                 </h3>
                 <button
-                  onClick={() => navigateTo('categories')}
-                  className="text-xs font-bold text-[#fc490f] hover:underline cursor-pointer"
+                  onClick={() => navigateTo('reviews')}
+                  className="text-xs font-bold text-[#fc490f] hover:underline cursor-pointer flex items-center gap-1"
                 >
                   View All &rarr;
                 </button>
               </div>
 
               <div className="space-y-3">
-                {CUSTOMER_REVIEWS.map(rev => (
-                  <div key={rev.id} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-xs space-y-2">
-                    <div className="flex items-center gap-3">
-                      <img src={rev.avatar} alt={rev.name} className="w-10 h-10 rounded-full object-cover border border-gray-200" />
-                      <div>
-                        <h4 className="text-xs font-bold text-gray-900 dark:text-white">{rev.name}</h4>
-                        <div className="flex items-center gap-0.5">
-                          {[...Array(rev.rating)].map((_, i) => (
-                            <Star key={i} className="w-3 h-3 text-amber-400 fill-amber-400" />
-                          ))}
+                {displayReviews.slice(0, 4).map((rev: any) => {
+                  const imgs: string[] = rev.images && Array.isArray(rev.images) ? rev.images : [];
+                  const vUrl = rev.video_url || rev.videoUrl;
+
+                  return (
+                    <div key={rev.id} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-xs space-y-2.5">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <img 
+                            src={rev.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80'} 
+                            alt={rev.name} 
+                            className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-slate-700 shrink-0" 
+                          />
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <h4 className="text-xs font-bold text-gray-900 dark:text-white">{rev.name}</h4>
+                              <span className="text-[10px] text-emerald-600 font-bold">✓ Verified</span>
+                            </div>
+                            <div className="flex items-center gap-0.5">
+                              {[...Array(rev.rating || 5)].map((_, i) => (
+                                <Star key={i} className="w-3 h-3 text-amber-400 fill-amber-400" />
+                              ))}
+                            </div>
+                          </div>
                         </div>
+                        <span className="text-[10px] text-gray-400">{rev.timeAgo || 'Recently'}</span>
+                      </div>
+
+                      <p className="text-xs text-gray-700 dark:text-gray-300 italic leading-relaxed">
+                        &ldquo;{rev.quote || rev.comment}&rdquo;
+                      </p>
+
+                      {/* Photo / Video chips if media is present */}
+                      {(imgs.length > 0 || vUrl) && (
+                        <div className="flex items-center gap-2 pt-1">
+                          {imgs.slice(0, 3).map((img: string, i: number) => (
+                            <div 
+                              key={i} 
+                              onClick={() => navigateTo('reviews')}
+                              className="w-12 h-12 rounded-xl overflow-hidden border border-gray-200 dark:border-slate-800 cursor-pointer hover:opacity-90"
+                            >
+                              <img src={img} alt="review media" className="w-full h-full object-cover" />
+                            </div>
+                          ))}
+                          {vUrl && (
+                            <span 
+                              onClick={() => navigateTo('reviews')}
+                              className="px-2.5 py-1 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 text-[10px] font-bold flex items-center gap-1 border border-red-200/50 cursor-pointer"
+                            >
+                              <Play className="w-3 h-3 fill-current" /> Video
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between text-[10px] text-gray-400 pt-1.5 border-t border-gray-50 dark:border-slate-800">
+                        <span className="font-bold text-gray-600 dark:text-gray-400">🏷️ {rev.productTag || rev.product_tag || 'Fresh Catch'}</span>
+                        <button 
+                          onClick={() => navigateTo('reviews')} 
+                          className="text-[#fc490f] font-bold hover:underline cursor-pointer"
+                        >
+                          Read full story &rarr;
+                        </button>
                       </div>
                     </div>
-                    <p className="text-xs text-gray-700 dark:text-gray-300 italic">
-                      &ldquo;{rev.quote}&rdquo;
-                    </p>
-                    <div className="flex items-center justify-between text-[10px] text-gray-400 pt-1 border-t border-gray-50 dark:border-slate-800">
-                      <span className="font-bold text-gray-600 dark:text-gray-400">🏷️ {rev.productTag}</span>
-                      <span>{rev.timeAgo}</span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 

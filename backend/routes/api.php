@@ -14,6 +14,8 @@ Route::get('/settings', [ApiController::class, 'getSettings']);
 Route::get('/onepager-settings', [ApiController::class, 'getOnepagerSettings']);
 Route::get('/slides', [ApiController::class, 'getSlides']);
 Route::get('/videos', [ApiController::class, 'getVideos']);
+Route::get('/reviews', [ApiController::class, 'getReviews']);
+Route::post('/reviews', [ApiController::class, 'submitReview']);
 Route::get('/categories', [ApiController::class, 'getCategories']);
 Route::get('/products', [ApiController::class, 'getProducts']);
 Route::get('/products/{codeOrSlug}', [ApiController::class, 'getProduct']);

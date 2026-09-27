@@ -98,6 +98,14 @@ Route::prefix('admin')->group(function () {
         Route::post('/delivery-pincodes/update/{id}', [AdminController::class, 'deliveryPincodesUpdate']);
         Route::post('/delivery-pincodes/delete', [AdminController::class, 'deliveryPincodesDelete']);
         Route::post('/delivery-pincodes/toggle-status', [AdminController::class, 'deliveryPincodesToggleStatus']);
+
+        // Customer Reviews Management (AJAX)
+        Route::get('/reviews', [AdminController::class, 'reviewsIndex']);
+        Route::post('/reviews/store', [AdminController::class, 'reviewsStore']);
+        Route::post('/reviews/update/{id}', [AdminController::class, 'reviewsUpdate']);
+        Route::post('/reviews/delete', [AdminController::class, 'reviewsDelete']);
+        Route::post('/reviews/toggle-status', [AdminController::class, 'reviewsToggleStatus']);
+
         // Logistics & Shipping Management
         Route::get('/logistics', [AdminController::class, 'logisticsIndex']);
         Route::get('/logistics/riders', [AdminController::class, 'ridersIndex']);

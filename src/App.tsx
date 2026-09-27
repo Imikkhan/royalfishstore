@@ -13,6 +13,7 @@ import { CategoryView } from './pages/CategoryView';
 import { Categories } from './pages/Categories';
 import { SearchPage } from './pages/Search';
 import { Onepager } from './pages/Onepager';
+import { Reviews } from './pages/Reviews';
 import { ShieldCheck, Snowflake, Zap, Leaf } from 'lucide-react';
 
 const AppContent: React.FC = () => {
@@ -28,6 +29,8 @@ const AppContent: React.FC = () => {
         return <Onepager />;
       case 'product-details':
         return <ProductDetails />;
+      case 'reviews':
+        return <Reviews />;
       case 'cart':
         return <Cart />;
       case 'profile':

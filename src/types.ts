@@ -111,4 +111,29 @@ export interface User {
   isLoggedIn: boolean;
 }
 
-export type PageId = 'home' | 'product-details' | 'cart' | 'profile' | 'login' | 'category-view' | 'categories' | 'search' | 'onepager';
+export interface Review {
+  id: string;
+  name: string;
+  avatar?: string;
+  rating: number;
+  quote: string;
+  comment?: string;
+  productTag?: string;
+  product_tag?: string;
+  timeAgo?: string;
+  images?: string[];
+  videoUrl?: string;
+  video_url?: string;
+  isVerified?: boolean;
+  is_verified?: boolean;
+  created_at?: string;
+}
+
+export interface ReviewSummary {
+  average_rating: number;
+  total_reviews: number;
+  rating_breakdown: { [star: string]: number };
+  with_media_count: number;
+}
+
+export type PageId = 'home' | 'product-details' | 'cart' | 'profile' | 'login' | 'category-view' | 'categories' | 'search' | 'onepager' | 'reviews';
